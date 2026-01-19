@@ -35,7 +35,7 @@ Para asegurar el éxito del proyecto, se deben cumplir los siguientes objetivos 
 *Requisitos Técnicos y de Calidad*
 
 - **Interfaz de Usuario (UI):** El diseño debe ser responsivo y optimizado para resoluciones web estándar, manteniendo la estética y legibilidad de los assets gráficos originales.
-- **Despliegue y Accesibilidad:** La aplicación debe ser accesible vía navegador web sin requerir configuraciones de entorno complejas por parte del usuario final.
+- **Despliegue y Disponibilidad:** La aplicación debe ser accesible vía navegador web sin requerir configuraciones de entorno complejas por parte del usuario final.
 - **Mantenibilidad:** El código debe estar estructurado modularmente siguiendo el modelo de dominio para facilitar futuras actualizaciones de reglas o componentes.
 
 
