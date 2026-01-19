@@ -22,19 +22,33 @@ A partir del análisis del manual de reglas y los componentes del juego original
 * **RNF-01: Fidelidad al Original:** La aplicación debe mantener la esencia del juego original, manteniendo tanto la experiencia de juego como los elementos gráficos y estética del juego.
 * **RNF-02: Usabilidad:** Los menús y interfaces deben ser fáciles de usar y comprender, y las acciones deben poder realizarse en no más de 3 clicks.
 * **RNF-03: Disponibilidad:** La aplicación debe estar disponible en todo momento mediante un despliegue web.
+* **RNF-04: Mantenibilidad y escalabilidad:** El código debe estar estructurado modularmente siguiendo el modelo de dominio para facilitar futuras actualizaciones de reglas o componentes.
 
 ## 3. Definición del Alcance (Enunciado del Alcance)
 El proyecto consiste en la creación de una versión digital funcional de Muses.
 
-* **Inclusiones (En el alcance):**
+* **Inclusiones:**
     * Digitalización del arte original.
     * Programación de las reglas core.
     * Modo de juego local y online.
-* **Exclusiones (Fuera del alcance):**
+* **Exclusiones:**
     * Juego local con IA avanzada.
     * Animaciones 3D complejas.
     * Sistemas de monetización o microtransacciones.
     * Tutorial detallado del juego.
+* **Restricciones**
+    * El proyecto debe ser realizado íntegramente por un único desarrollador.
+    * La fecha límite de entrega es inamovible, sujeta al calendario académico de la universidad.
+    * El presupuesto para adquisiciones externas (dominio, hosting) no debe exceder los 50€.
+* **Supuestos**
+    * Se asume que el autor del juego original permite el uso de los assets para fines académicos.
+    * El tutor del proyecto proporcionará las revisiones necesarias en los plazos acordados.
+    * El hardware y software de desarrollo actuales son suficientes para completar el proyecto sin adquisiciones adicionales de equipo.
+    
+* **Entregables**
+    * Aplicación funcional del juego Muses.
+    * Memoria técnica del TFG documentando la gestión y el desarrollo.
+    * Lista de Características (Diccionario de la EDT) e historial de cambios.
 
 ## 4. Estructura de Desglose de Trabajo (EDT / WBS)
 Se ha organizado el proyecto en bloques lógicos que permiten una gestión incremental. La jerarquía establecida es la siguiente:
