@@ -3,7 +3,7 @@
 Este capítulo detalla los procesos seguidos para asegurar que el proyecto incluya todo el trabajo requerido, y únicamente el trabajo requerido, para completar la digitalización de Muses de forma exitosa.
 
 ## 1. Planificación de la Gestión del Alcance
-Para este proyecto, la gestión del alcance se realiza de manera integrada con la metodología **FDD**. El alcance se define inicialmente mediante los requisitos de alto nivel y se desglosa técnicamente a través del modelo de dominio. El control de cualquier cambio en estas funcionalidades quedará registrado en la entrada del día en el que se tomó la decisión.
+Para este proyecto, la gestión del alcance se realiza de manera integrada con la metodología **FDD**. El alcance se define inicialmente mediante los requisitos de alto nivel y se desglosa técnicamente a través del modelo de dominio. El control de cualquier cambio en estas funcionalidades quedará registrado en la entrada del **Devlog (Diario de Proyecto)** del día en el que se tomó la decisión.
 
 ## 2. Recopilación de Requisitos
 A partir del análisis del manual de reglas y los componentes del juego original, se han categorizado los requisitos en funcionales y no funcionales.
