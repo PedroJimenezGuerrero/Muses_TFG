@@ -53,15 +53,17 @@ El proyecto consiste en la creación de una versión digital funcional de Muses.
 ## 4. Estructura de Desglose de Trabajo (EDT / WBS)
 Se ha organizado el proyecto en bloques lógicos que permiten una gestión incremental. La jerarquía establecida es la siguiente:
 
-1. **Digitalización de Muses**
-    1.1. **Gestión y Documentación** (Acta, Memoria, Seguimiento)
-    1.2. **Análisis y Diseño de Software** (Modelo de Dominio, UML, Lista de Características)
-    1.3. **Procesamiento de Assets** (Limpieza de imágenes P&P, optimización y sprites)
-    1.4. **Desarrollo de Lógica Core** (Motor de reglas, sistema de rondas, IA básica)
-    1.5. **Interfaz y Experiencia de Usuario** (Menús, HUD, efectos visuales)
-    1.6. **Pruebas y Despliegue** (Playtesting, corrección de bugs, hosting del dominio)
+- 1. **Digitalización de Muses**
+  - 1.1. **Inicio** (Acta de Constitución, Configuración del entorno)
+  - 1.2. **Planificación** (Cronograma, EDT, Riesgos, Alcance, Requisitos)
+  - 1.3. **Análisis** (Modelo de Dominio, Diagramas UML)
+  - 1.4. **Desarrollo**
+    - 1.4.1. **Reglas** (Lógica del tablero, cartas y puntuación)
+    - 1.4.2. **UI** (Interfaz gráfica, assets y efectos)
+    - 1.4.3. **Modos de Juego** (IA Local, Juego Online)
+    - 1.4.4. **Despliegue** (CI/CD, Hosting, Tests)
+  - 1.5. **Monitoreo** (Seguimiento, Control de cambios)
+  - 1.6. **Cierre** (Memoria, Entrega final)
 
 ## 5. Diccionario de la EDT y Feature List
-Tal como se definió en la metodología, el diccionario de la EDT se encuentra unificado con la **Lista de Características de FDD**. Cada paquete de trabajo del nivel 1.4 y 1.5 se detalla a continuación mediante el formato "Acción + Resultado + Objeto", proporcionando una trazabilidad total entre la gestión y el desarrollo.
-
-<!-- TODO: Completar -->
+Tal como se definió en la metodología, el diccionario de la EDT se encuentra unificado con la **Lista de Características de FDD**. Cada paquete de trabajo de desarrollo (nivel 1.4) se detalla en el documento `EDT.md` mediante el formato "Acción + Resultado + Objeto", proporcionando trazabilidad entre la gestión y construcción del software.
