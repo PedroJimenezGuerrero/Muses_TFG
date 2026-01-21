@@ -1,0 +1,29 @@
+{
+    "name": "Muses TFG Dev Container",
+    "image": "mcr.microsoft.com/devcontainers/universal:2",
+    "features": {
+        "ghcr.io/devcontainers/features/java:1": {
+            "version": "latest",
+            "jdkDistro": "ms",
+            "gradleVersion": "latest",
+            "mavenVersion": "latest"
+        },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "lts"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "vscjava.vscode-java-pack",
+                "vmware.vscode-spring-boot",
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "eamodio.gitlens",
+                "vivaxy.vscode-conventional-commits",
+                "codezombiech.gitignore"
+            ]
+        }
+    },
+    "postCreateCommand": "echo 'Dev Container started!'"
+}
