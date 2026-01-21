@@ -70,15 +70,15 @@ El proyecto incluye el análisis de reglas, la digitalización de assets, la pro
 
 ## Cronograma de Hitos Resumido
 
-| Hito del Proyecto | Fecha Objetivo (dd/mm/aaaa) |
-| :--- | :--- |
-| Inicio del Proyecto | 19/01/2026 |
-| Modelo de Dominio y Lista de Características completa | 26/01/2026 |
-| Prototipo funcional (Mecánicas básicas) | 20/03/2026 |
-| Arte y UI final integrados | 17/04/2026 |
-| Finalización de Pruebas y Playtesting | 24/04/2026 |
-| Despliegue en Dominio y Entrega de Memoria | 20/05/2026 |
-| Defensa del TFG | [Por determinar] |
+| Hito del Proyecto                                     | Fecha Objetivo (dd/mm/aaaa) |
+| :---------------------------------------------------- | :-------------------------- |
+| Inicio del Proyecto                                   | 19/01/2026                  |
+| Modelo de Dominio y Lista de Características completa | 26/01/2026                  |
+| Prototipo funcional (Mecánicas básicas)               | 20/03/2026                  |
+| Arte y UI final integrados                            | 17/04/2026                  |
+| Finalización de Pruebas y Playtesting                 | 24/04/2026                  |
+| Despliegue en Dominio y Entrega de Memoria            | 20/05/2026                  |
+| Defensa del TFG                                       | [Por determinar]            |
 
 ## Presupuesto Resumido
 
