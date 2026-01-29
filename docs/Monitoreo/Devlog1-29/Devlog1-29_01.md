@@ -16,3 +16,7 @@
   - El nombre del paquete es tfg.muses.
   - Se ha usado JAR como formato para packaging.
   - Se ha elegido YAML como formato para la configuración.
+  - Se han **creado los modelos de las entidades** base.
+    - Las cartas tienen un modelo abstracto que heredan los modelos de las cartas.
+    - Es posible que **las cartas puedan eliminarse de los modelos**, al no ser "consumidas" cuando se usan.
+  - Se ha movido la configuración de gradle a la carpeta raíz para que quede una estructura más limpia.
