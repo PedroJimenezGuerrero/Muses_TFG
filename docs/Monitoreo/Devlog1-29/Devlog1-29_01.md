@@ -1,0 +1,18 @@
+# Devlog 1: 29/01/2026
+
+- Se ha instalado nextjs con el comando correspondiente: `npx create-next-app@latest .`
+    - Se han seleccionado las opciones por defecto y se ha llamado al proyecto "muses".
+- Se ha descargado el inicializador de [spring boot](https://start.spring.io/)
+  - Se ha seleccionado la última versión estable de spring boot (4.0.2)
+  - Se ha seleccionado java 21, ya que java 25 no supone un gran cambio y ya se tenía intalado java 21 LTS. 
+  - Se ha seleccionado gradle kotlin como gestor de las siguientes dependencias:
+    - **Spring Web**: Creación de API RESTful.
+    - **Spring Data JPA**: Gestión de persistencia y acceso a datos SQL.
+    - **PostgreSQL Driver**: Conector para la base de datos PostgreSQL.
+    - **Lombok**: Reducción de código repetitivo.
+    - **Spring Boot DevTools**: Reinicio rápido y utilidades de desarrollo.
+    - **Spring Security**: Framework de seguridad para autenticación y autorización.
+    - **Validation**: Validación de datos y restricciones.
+  - El nombre del paquete es tfg.muses.
+  - Se ha usado JAR como formato para packaging.
+  - Se ha elegido YAML como formato para la configuración.
