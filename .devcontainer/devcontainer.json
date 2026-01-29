@@ -1,17 +1,17 @@
 {
-    "name": "Muses TFG Dev Container",
-    "image": "mcr.microsoft.com/devcontainers/universal:2",
+    "name": "Muses TFG (Direct Image)",
+    // Usamos la imagen directamente. Docker solo la descarga (300MB), NO construye nada.
+    "image": "mcr.microsoft.com/devcontainers/java:1-21-bullseye",
+    
     "features": {
-        "ghcr.io/devcontainers/features/java:1": {
-            "version": "latest",
-            "jdkDistro": "ms",
-            "gradleVersion": "latest",
-            "mavenVersion": "latest"
-        },
+        // Instalamos Node via feature (ahora que tenemos overlay2 arreglado, debería aguantar)
         "ghcr.io/devcontainers/features/node:1": {
-            "version": "lts"
+            "version": "lts",
+            "pnpm": "none",
+            "yarn": "none"
         }
     },
+
     "customizations": {
         "vscode": {
             "extensions": [
@@ -25,5 +25,7 @@
             ]
         }
     },
-    "postCreateCommand": "echo 'Dev Container started!'"
+    
+    "forwardPorts": [8080, 3000],
+    "postCreateCommand": "npm install && echo 'Entorno listo'"
 }
