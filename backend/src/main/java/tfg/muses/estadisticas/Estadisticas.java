@@ -8,7 +8,7 @@ import tfg.muses.baseEntity.BaseEntity;
 @Entity
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class EstadisticasModel extends BaseEntity {
+public class Estadisticas extends BaseEntity {
 
     private int partidasJugadas;
     private int victorias;

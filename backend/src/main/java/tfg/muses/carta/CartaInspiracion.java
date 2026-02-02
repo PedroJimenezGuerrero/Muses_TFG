@@ -1,18 +1,21 @@
 package tfg.muses.carta;
 
+import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import tfg.muses.musa.TipoMusa;
 
 @Entity
+@DiscriminatorValue("INSPIRACION")
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class CartaAccionModel extends CartaBase {
+public class CartaInspiracion extends CartaBase {
 
     @Enumerated(EnumType.STRING)
-    private TipoAccion tipo;
+    private TipoMusa musaObjetivo;
 
-    private int prioridad;
+    private boolean usada;
 }
