@@ -2,6 +2,8 @@ package tfg.muses.jugador;
 
 import java.util.List;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -10,28 +12,30 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import tfg.muses.baseEntity.BaseEntity;
 import tfg.muses.carta.CartaBase;
-import tfg.muses.carta.CartaInspiracionModel;
-import tfg.muses.token.TokenModel;
-import tfg.muses.usuario.UsuarioModel;
+import tfg.muses.carta.CartaInspiracion;
+import tfg.muses.token.Token;
+import tfg.muses.usuario.Usuario;
 
 @Entity
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class JugadorModel extends BaseEntity {
+public class Jugador extends BaseEntity {
 
+    @Column(nullable = false)
     private String nombre; // Nickname in the game context
+    
     private int numeroJugador;
     private int puntuacionTotal;
 
-    @OneToOne
-    private CartaInspiracionModel cartaInspiracion;
+    @OneToOne(cascade = CascadeType.ALL)
+    private CartaInspiracion cartaInspiracion;
 
-    @OneToMany
+    @OneToMany(cascade = CascadeType.ALL)
     private List<CartaBase> mano;
 
-    @OneToMany
-    private List<TokenModel> reservaTokens;
+    @OneToMany(cascade = CascadeType.ALL)
+    private List<Token> reservaTokens;
 
-    @ManyToOne
-    private UsuarioModel usuario;
+    @ManyToOne(optional = false)
+    private Usuario usuario;
 }

@@ -5,17 +5,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import tfg.muses.tablero.TableroModel;
+import tfg.muses.tablero.Tablero;
 import tfg.muses.tablero.TableroService;
 
 public class TableroServiceTests {
     private TableroService tableroService;
-    private TableroModel tablero;
+    private Tablero tablero;
 
     @BeforeEach
     public void setUp() {
         tableroService = new TableroService();
-        tablero = new TableroModel();
+        tablero = new Tablero();
     }
 
     @Test

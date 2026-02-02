@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class TableroService {
-    public void rotarAstros(TableroModel tablero){
+    public void rotarAstros(Tablero tablero){
         Integer nuevaPosicionSol = tablero.getSolPos();
         Integer nuevaPosicionLuna = tablero.getLunaPos();
 

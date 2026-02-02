@@ -2,17 +2,18 @@ package tfg.muses.tablero;
 
 import java.util.List;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import tfg.muses.baseEntity.BaseEntity;
-import tfg.muses.musa.MusaModel;
+import tfg.muses.musa.Musa;
 
 @Entity
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class TableroModel extends BaseEntity {
+public class Tablero extends BaseEntity {
 
     /*
     El índice de los tokens empieza en el 0 en la esquina superior izquierda
@@ -25,6 +26,6 @@ public class TableroModel extends BaseEntity {
     private int solPos; 
     private int lunaPos;   
 
-    @OneToMany
-    private List<MusaModel> grid;
+    @OneToMany(cascade = CascadeType.ALL)
+    private List<Musa> grid;
 }
