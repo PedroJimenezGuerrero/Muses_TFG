@@ -8,18 +8,21 @@ services:
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
 
-    environment:
-      DB_HOST: db
+    env_file:
+      - ../.env
 
   db:
     image: postgres:15-alpine
     restart: always
+    env_file:
+      - ../.env
     environment:
-      POSTGRES_DB: muses
-      POSTGRES_USER: muses
-      POSTGRES_PASSWORD: muses
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ./.devcontainer/init.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   db_data:
