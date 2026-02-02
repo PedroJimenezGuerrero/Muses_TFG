@@ -1,0 +1,25 @@
+version: '3.8'
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/java:1-21-bullseye
+    volumes:
+      - ../:/workspaces/Muses_TFG:cached
+
+    # Overrides default command so things don't shut down after the process ends.
+    command: sleep infinity
+
+    environment:
+      DB_HOST: db
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: muses
+      POSTGRES_USER: muses
+      POSTGRES_PASSWORD: muses
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:

@@ -1,17 +1,16 @@
 {
-    "name": "Muses TFG (Direct Image)",
-    // Usamos la imagen directamente. Docker solo la descarga (300MB), NO construye nada.
-    "image": "mcr.microsoft.com/devcontainers/java:1-21-bullseye",
-    
+    "name": "Muses TFG (Docker Compose)",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/workspaces/Muses_TFG",
+    "remoteUser": "vscode",
     "features": {
-        // Instalamos Node via feature (ahora que tenemos overlay2 arreglado, debería aguantar)
         "ghcr.io/devcontainers/features/node:1": {
             "version": "lts",
             "pnpm": "none",
             "yarn": "none"
         }
     },
-
     "customizations": {
         "vscode": {
             "extensions": [
@@ -25,7 +24,9 @@
             ]
         }
     },
-    
-    "forwardPorts": [8080, 3000],
-    "postCreateCommand": "npm install && echo 'Entorno listo'"
+    "forwardPorts": [
+        8080,
+        3000
+    ],
+    "postCreateCommand": "echo 'Entorno listo - Ejecuta npm install manualmente si es necesario'"
 }
