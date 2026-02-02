@@ -13,6 +13,13 @@ public class TableroService {
 
         tablero.setSolPos(nuevaPosicionSol);
         tablero.setLunaPos(nuevaPosicionLuna);
+
+        // Si no están en índices opuestos, se toma el token del sol como 
+        // posición correcta y se ajusta la luna acorde con él
+        if (tablero.getSolPos() - tablero.getLunaPos() != 4){
+            nuevaPosicionLuna = (tablero.getSolPos() + 4) % 8;
+            tablero.setLunaPos(nuevaPosicionLuna);
+        }
     }
 
 }
