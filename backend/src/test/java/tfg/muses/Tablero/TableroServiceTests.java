@@ -37,4 +37,16 @@ public class TableroServiceTests {
         assertEquals(0, tablero.getLunaPos());
     }
 
+    @Test
+    public void testRotarAstrosWithInvalidPositions() {
+        tablero.setSolPos(8); // Sol: arriba izquierda (sin modulo de 8)
+        tablero.setLunaPos(5);  // Luna: Abajo centro (debería ser 4)
+
+        tableroService.rotarAstros(tablero);
+        
+        // Tras rotar se arreglan las incongruencias
+        assertEquals(1, tablero.getSolPos());
+        assertEquals(5, tablero.getLunaPos());
+    }
+
 }
