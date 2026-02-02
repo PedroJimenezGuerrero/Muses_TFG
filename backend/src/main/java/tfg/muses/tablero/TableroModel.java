@@ -14,8 +14,16 @@ import tfg.muses.musa.MusaModel;
 @EqualsAndHashCode(callSuper = true)
 public class TableroModel extends BaseEntity {
 
-    private int solPos; // Representamos posición como índice o valor
-    private int lunaPos;
+    /*
+    El índice de los tokens empieza en el 0 en la esquina superior izquierda
+
+    0   1   2
+    7       3
+    6   5   4
+    
+    */
+    private int solPos; 
+    private int lunaPos;   
 
     @OneToMany
     private List<MusaModel> grid;
