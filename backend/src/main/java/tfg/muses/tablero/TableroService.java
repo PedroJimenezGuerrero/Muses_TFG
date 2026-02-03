@@ -32,7 +32,7 @@ public class TableroService {
         List<Musa> newGrid = null;
         switch (posicionAstro) {
             case 0:
-                newGrid = rotacionDiagonalDominanteSuperior(newGrid);
+                newGrid = rotacionDiagonalDominanteSuperior(grid);
                 break;
             case 1:
                 newGrid = rotacionVerticalDerecha(grid);
@@ -85,14 +85,6 @@ public class TableroService {
         return tablero;
     }
 
-    private List<Musa> rotacionGeneral(List<Musa> grid, int[] indices) {
-        Musa temp = grid.get(indices[0]);
-        for (int i = 0; i < indices.length - 1; i++) {
-            grid.set(indices[i], grid.get(indices[i + 1]));
-        }
-        grid.set(indices[indices.length - 1], temp);
-        return grid;
-    }
 
     /*
      * Las rotaciones se hacen en sentido horario, pero
@@ -169,4 +161,12 @@ public class TableroService {
         return grid;
     }
 
+    private List<Musa> rotacionGeneral(List<Musa> grid, int[] indices) {
+        Musa temp = grid.get(indices[0]);
+        for (int i = 0; i < indices.length - 1; i++) {
+            grid.set(indices[i], grid.get(indices[i + 1]));
+        }
+        grid.set(indices[indices.length - 1], temp);
+        return grid;
+    }
 }
