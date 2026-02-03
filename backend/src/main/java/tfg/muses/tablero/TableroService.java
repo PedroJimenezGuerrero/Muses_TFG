@@ -22,4 +22,14 @@ public class TableroService {
         }
     }
 
+    public void revolucionSolar(Tablero tablero) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'revolucionSolar'");
+    }
+
+    public void revolucionLunar(Tablero tablero) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'revolucionLunar'");
+    }
+
 }

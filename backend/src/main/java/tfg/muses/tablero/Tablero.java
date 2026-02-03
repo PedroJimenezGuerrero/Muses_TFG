@@ -26,6 +26,14 @@ public class Tablero extends BaseEntity {
     private int solPos; 
     private int lunaPos;   
 
+
+    /* El índice de las musas empieza en la esquina superior izquierda
+    
+    0   1   2
+    3   4   5
+    6   7   8
+    
+    */
     @OneToMany(cascade = CascadeType.ALL)
     private List<Musa> grid;
 }
