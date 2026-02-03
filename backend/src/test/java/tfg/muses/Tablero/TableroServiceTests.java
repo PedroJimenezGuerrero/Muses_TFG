@@ -143,13 +143,13 @@ public class TableroServiceTests {
         Musa musaInicial1 = tablero.getGrid().get(1); // Esta se moverá a la posición 4 (abajo)
         Musa musaInicial7 = tablero.getGrid().get(7); // Esta no debe moverse
 
-        // Ejecutar revolución solar
-        tableroService.revolucionSolar(tablero);
+        // Ejecutar revolución lunar
+        tableroService.revolucionLunar(tablero);
 
         // Verificar rotación horaria: posición i debe contener lo que estaba en i-1
         assertEquals(musaInicial0, tablero.getGrid().get(1), "Posición 0 debe contener musa de posición 0");
         assertEquals(musaInicial1, tablero.getGrid().get(4), "Posición 4 debe contener musa de posición 1");
-        assertEquals(musaInicial7, tablero.getGrid().get(7), "Posición 7 debe contener musa de posición 7");
+        assertEquals(musaInicial7, tablero.getGrid().get(6), "Posición 6 debe contener musa de posición 7");
     }
 
     @Test
@@ -197,7 +197,7 @@ public class TableroServiceTests {
 
         // Verificar rotación horaria: posición i debe contener lo que estaba en i-1
         assertEquals(musaInicial0, tablero.getGrid().get(1), "Posición 1 debe contener musa de posición 0");
-        assertEquals(musaInicial4, tablero.getGrid().get(2), "Posición 2 debe contener musa de posición 4");
+        assertEquals(musaInicial4, tablero.getGrid().get(0), "Posición 0 debe contener musa de posición 4");
         assertEquals(musaInicial7, tablero.getGrid().get(7), "Posición 7 debe contener musa de posición 7");
     }
 
@@ -242,13 +242,13 @@ public class TableroServiceTests {
         Musa musaInicial4 = tablero.getGrid().get(4); // Esta se moverá a la posición 7 (su diagonal der)
         Musa musaInicial7 = tablero.getGrid().get(7); // Esta se moverá a la posción 6 (su izquierda)
 
-        // Ejecutar revolución solar
-        tableroService.revolucionSolar(tablero);
+        // Ejecutar revolución lunar
+        tableroService.revolucionLunar(tablero);
 
         // Verificar rotación horaria: posición i debe contener lo que estaba en i-1
         assertEquals(musaInicial0, tablero.getGrid().get(4), "Posición 4 debe contener musa de posición 0");
         assertEquals(musaInicial2, tablero.getGrid().get(2), "Posición 2 debe contener musa de posición 2");
-        assertEquals(musaInicial4, tablero.getGrid().get(7), "Posición 7 debe contener musa de posición 4");
+        assertEquals(musaInicial4, tablero.getGrid().get(8), "Posición 8 debe contener musa de posición 4");
         assertEquals(musaInicial7, tablero.getGrid().get(6), "Posición 6 debe contener musa de posición 7");
     }
 
