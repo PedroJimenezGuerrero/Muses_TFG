@@ -3,13 +3,22 @@ package tfg.muses.tablero;
 import java.security.InvalidParameterException;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import jakarta.persistence.criteria.CriteriaBuilder.In;
 import tfg.muses.musa.Musa;
+import tfg.muses.partida.Partida;
+import tfg.muses.partida.PartidaRepository;
 
 @Service
 public class TableroService {
-    public void rotarAstros(Tablero tablero) {
+
+    @Autowired
+    private TableroRepository tableroRepository;
+    private PartidaRepository partidaRepository;
+
+    public Tablero rotarAstros(Tablero tablero) {
         Integer nuevaPosicionSol = tablero.getSolPos();
         Integer nuevaPosicionLuna = tablero.getLunaPos();
 
@@ -25,6 +34,7 @@ public class TableroService {
             nuevaPosicionLuna = (tablero.getSolPos() + 4) % 8;
             tablero.setLunaPos(nuevaPosicionLuna);
         }
+        return tablero;
     }
 
     private Tablero revolucion(Tablero tablero, Integer posicionAstro) throws Exception {
@@ -168,5 +178,23 @@ public class TableroService {
         }
         grid.set(indices[indices.length - 1], temp);
         return grid;
+    }
+
+
+    public Tablero getById(Long id) {
+        return tableroRepository.findById(id).orElse(null);
+    }
+
+
+    public Tablero getByPartidaId(Long partidaId) {
+        Partida partida = partidaRepository.findById(partidaId).orElse(null);
+        if (partida != null) {
+            return partida.getTablero();
+        }
+        return null;    
+    }
+
+    public Tablero save(Tablero tablero) {
+        return tableroRepository.save(tablero);
     }
 }
