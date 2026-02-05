@@ -6,17 +6,22 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import jakarta.persistence.criteria.CriteriaBuilder.In;
 import tfg.muses.musa.Musa;
 import tfg.muses.partida.Partida;
 import tfg.muses.partida.PartidaRepository;
+import tfg.muses.partida.PartidaService;
 
 @Service
 public class TableroService {
 
     @Autowired
     private TableroRepository tableroRepository;
+
+    @Autowired
     private PartidaRepository partidaRepository;
+
+    @Autowired
+    private PartidaService partidaService;
 
     public Tablero rotarAstros(Tablero tablero) {
         Integer nuevaPosicionSol = tablero.getSolPos();
@@ -196,5 +201,41 @@ public class TableroService {
 
     public Tablero save(Tablero tablero) {
         return tableroRepository.save(tablero);
+    }
+
+    /**
+     * Obtener todos los tableros
+     */
+    public List<Tablero> getAll() {
+        return tableroRepository.findAll();
+    }
+
+    /**
+     * Actualizar un tablero existente
+     */
+    public Tablero update(Long id, Tablero tableroActualizado) {
+        return tableroRepository.findById(id).map(tablero -> {
+            tablero.setSolPos(tableroActualizado.getSolPos());
+            tablero.setLunaPos(tableroActualizado.getLunaPos());
+            tablero.setGrid(tableroActualizado.getGrid());
+            return tableroRepository.save(tablero);
+        }).orElse(null);
+    }
+
+    /**
+     * Eliminar un tablero por su ID
+     */
+    public void delete(Long id) {
+        tableroRepository.deleteById(id);
+    }
+
+    /**
+     * Eliminar el tablero de una partida
+     */
+    public void deleteAllByPartida(Long partidaId) {
+        Tablero tablero = partidaService.getTableroByPartida(partidaId);
+        if (tablero != null) {
+            tableroRepository.delete(tablero);
+        }
     }
 }
