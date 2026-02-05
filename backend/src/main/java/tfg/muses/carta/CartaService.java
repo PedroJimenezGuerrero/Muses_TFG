@@ -37,6 +37,13 @@ public class CartaService {
     }
 
     /**
+     * Obtener todas las cartas de una partida
+     */
+    public List<CartaBase> getAllByPartida(Long partidaId) {
+        return partidaService.getCartasByPartida(partidaId);
+    }
+
+    /**
      * Eliminar una carta por su ID
      */
     public void delete(Long id) {

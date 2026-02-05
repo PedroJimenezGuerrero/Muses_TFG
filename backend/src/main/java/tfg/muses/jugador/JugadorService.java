@@ -37,6 +37,13 @@ public class JugadorService {
     }
 
     /**
+     * Obtener todos los jugadores de una partida
+     */
+    public List<Jugador> getAllByPartida(Long partidaId) {
+        return partidaService.getJugadoresByPartida(partidaId);
+    }
+
+    /**
      * Actualizar un jugador existente
      */
     public Jugador update(Long id, Jugador jugadorActualizado) {

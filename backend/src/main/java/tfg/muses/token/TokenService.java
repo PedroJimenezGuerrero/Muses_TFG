@@ -37,6 +37,13 @@ public class TokenService {
     }
 
     /**
+     * Obtener todos los tokens de una partida
+     */
+    public List<Token> getAllByPartida(Long partidaId) {
+        return partidaService.getTokensByPartida(partidaId);
+    }
+
+    /**
      * Actualizar un token existente
      */
     public Token update(Long id, Token tokenActualizado) {
