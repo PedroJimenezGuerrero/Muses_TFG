@@ -37,6 +37,13 @@ public class MusaService {
     }
 
     /**
+     * Obtener todas las musas de una partida
+     */
+    public List<Musa> getAllByPartida(Long partidaId) {
+        return partidaService.getMusasByPartida(partidaId);
+    }
+
+    /**
      * Actualizar una musa existente
      */
     public Musa update(Long id, Musa musaActualizada) {
