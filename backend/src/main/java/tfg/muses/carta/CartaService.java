@@ -1,0 +1,53 @@
+package tfg.muses.carta;
+
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import tfg.muses.partida.PartidaService;
+
+@Service
+public class CartaService {
+
+    @Autowired
+    private CartaRepository cartaRepository;
+
+    @Autowired
+    private PartidaService partidaService;
+
+    /**
+     * Crear una nueva carta
+     */
+    public CartaBase create(CartaBase carta) {
+        return cartaRepository.save(carta);
+    }
+
+    /**
+     * Obtener una carta por su ID
+     */
+    public CartaBase getById(Long id) {
+        return cartaRepository.findById(id).orElse(null);
+    }
+
+    /**
+     * Obtener todas las cartas
+     */
+    public List<CartaBase> getAll() {
+        return cartaRepository.findAll();
+    }
+
+    /**
+     * Eliminar una carta por su ID
+     */
+    public void delete(Long id) {
+        cartaRepository.deleteById(id);
+    }
+
+    /**
+     * Eliminar todas las cartas de una partida
+     */
+    public void deleteAllByPartida(Long partidaId) {
+        List<CartaBase> cartas = partidaService.getCartasByPartida(partidaId);
+        cartaRepository.deleteAll(cartas);
+    }
+}
