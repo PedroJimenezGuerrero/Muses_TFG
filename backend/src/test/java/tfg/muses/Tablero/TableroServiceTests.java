@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,7 +70,7 @@ public class TableroServiceTests {
         tablero.setSolPos(1);
         tablero.setLunaPos(5);
 
-        /* 
+        /*
         la rotación debería efectuarse en sentido horario, 
         la musa 4 yendo hacia el sol
 
@@ -87,7 +88,7 @@ public class TableroServiceTests {
         6   8   5
            luna
         
-        */
+         */
 
         // Guardar referencias de musas iniciales
         Musa musaInicial0 = tablero.getGrid().get(0); // Esta no debe moverse
@@ -118,7 +119,7 @@ public class TableroServiceTests {
         tablero.setSolPos(1);
         tablero.setLunaPos(5);
 
-        /* 
+        /*
         la rotación debería efectuarse en sentido horario, 
         la musa 4 yendo hacia la luna
 
@@ -136,7 +137,7 @@ public class TableroServiceTests {
         7   4   8
            luna
         
-        */
+         */
 
         // Guardar referencias de musas iniciales
         Musa musaInicial0 = tablero.getGrid().get(0); // Esta se moverá a la posición 1 (su derecha)
@@ -167,7 +168,7 @@ public class TableroServiceTests {
         tablero.setSolPos(0);
         tablero.setLunaPos(4);
 
-        /* 
+        /*
         la rotación debería efectuarse en sentido horario, 
         la musa 4 yendo hacia el sol
 
@@ -185,7 +186,7 @@ public class TableroServiceTests {
           6   7   5
                    luna
         
-        */
+         */
 
         // Guardar referencias de musas iniciales
         Musa musaInicial0 = tablero.getGrid().get(0); // Esta se moverá a la posición 1 (su derecha)
@@ -216,7 +217,7 @@ public class TableroServiceTests {
         tablero.setSolPos(0);
         tablero.setLunaPos(4);
 
-        /* 
+        /*
         la rotación debería efectuarse en sentido horario, 
         la musa 4 yendo hacia la luna
 
@@ -234,7 +235,7 @@ public class TableroServiceTests {
           7   8   4
                    luna
         
-        */
+         */
 
         // Guardar referencias de musas iniciales
         Musa musaInicial0 = tablero.getGrid().get(0); // Esta se moverá a la posición 4 (su diagonal der)
@@ -252,4 +253,33 @@ public class TableroServiceTests {
         assertEquals(musaInicial7, tablero.getGrid().get(6), "Posición 6 debe contener musa de posición 7");
     }
 
+    @Test
+    public void testGetMusasEnAstros() {
+        // Crear lista de musas para el grid
+        List<Musa> gridMusas = new ArrayList<>();
+        for (TipoMusa tipoMusa : TipoMusa.values()) {
+            Musa musa = new Musa();
+            musa.setNombre(tipoMusa);
+            gridMusas.add(musa);
+        }
+        tablero.setGrid(gridMusas);
+        
+        // Sol en pos 0 (debería corresponder a la musa en la posición 0)
+        tablero.setSolPos(0); 
+        // Luna en pos 4 (debería corresponder a la musa en la posición 8)
+        tablero.setLunaPos(4);
+        
+        /*
+          sol     
+            0   1   2
+            3   4   5
+            6   7   8
+                     luna
+        */
+
+        Map<String, Musa> result = tableroService.getMusasEnAstros(tablero);
+
+        assertEquals(TipoMusa.values()[0], result.get("sol").getNombre());
+        assertEquals(TipoMusa.values()[8], result.get("luna").getNombre());
+    }
 }
