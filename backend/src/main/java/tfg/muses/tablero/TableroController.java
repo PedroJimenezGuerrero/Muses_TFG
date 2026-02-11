@@ -1,9 +1,15 @@
 package tfg.muses.tablero;
 
 import org.springframework.web.bind.annotation.RestController;
+
+import tfg.muses.musa.Musa;
+
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -61,6 +67,11 @@ public class TableroController {
     public Tablero createTablero(@RequestBody Tablero tablero) {
         Tablero newTablero = tableroService.save(tablero);
         return newTablero;
+    }
+
+    @GetMapping("/getMusasEnAstros/{id}")
+    public Map<String, Musa> getMusasEnAstros(@PathVariable Long id) {
+        return tableroService.getMusasEnAstros(id);
     }
 
 }

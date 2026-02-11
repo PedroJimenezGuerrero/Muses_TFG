@@ -1,7 +1,9 @@
 package tfg.muses.tablero;
 
 import java.security.InvalidParameterException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -100,7 +102,6 @@ public class TableroService {
         return tablero;
     }
 
-
     /*
      * Las rotaciones se hacen en sentido horario, pero
      * los indices se sustituyen en orden contrario para
@@ -185,18 +186,16 @@ public class TableroService {
         return grid;
     }
 
-
     public Tablero getById(Long id) {
         return tableroRepository.findById(id).orElse(null);
     }
-
 
     public Tablero getByPartidaId(Long partidaId) {
         Partida partida = partidaRepository.findById(partidaId).orElse(null);
         if (partida != null) {
             return partida.getTablero();
         }
-        return null;    
+        return null;
     }
 
     public Tablero save(Tablero tablero) {
@@ -236,6 +235,63 @@ public class TableroService {
         Tablero tablero = partidaService.getTableroByPartida(partidaId);
         if (tablero != null) {
             tableroRepository.delete(tablero);
+        }
+    }
+
+    /**
+     * Obtener las musas en las posiciones del sol y la luna por ID
+     */
+    public Map<String, Musa> getMusasEnAstros(Long tableroId) {
+        Tablero tablero = getById(tableroId);
+        if (tablero == null) {
+            throw new IllegalArgumentException("El tablero con id " + tableroId + " no existe.");
+        }
+        return getMusasEnAstros(tablero);
+    }
+
+    /**
+     * Obtener las musas en las posiciones del sol y la luna (Lógica)
+     */
+    public Map<String, Musa> getMusasEnAstros(Tablero tablero) {
+        int solGridIndex = mapAstroToGrid(tablero.getSolPos());
+        int lunaGridIndex = mapAstroToGrid(tablero.getLunaPos());
+
+        Musa musaSol = tablero.getGrid().get(solGridIndex);
+        Musa musaLuna = tablero.getGrid().get(lunaGridIndex);
+
+        Map<String, Musa> result = new HashMap<>();
+        result.put("sol", musaSol);
+        result.put("luna", musaLuna);
+
+        return result;
+    }
+
+    /**
+     * Mapear la posición del astro a la posición en el grid
+     * 
+     * @param astroPos Posición del astro (0-7)
+     * @return Posición en el grid (0-8)
+     */
+    private int mapAstroToGrid(int astroPos) {
+        switch (astroPos) {
+            case 0:
+                return 0;
+            case 1:
+                return 1;
+            case 2:
+                return 2;
+            case 3:
+                return 5;
+            case 4:
+                return 8;
+            case 5:
+                return 7;
+            case 6:
+                return 6;
+            case 7:
+                return 3;
+            default:
+                throw new InvalidParameterException("Posición de astro inválida: " + astroPos);
         }
     }
 }
