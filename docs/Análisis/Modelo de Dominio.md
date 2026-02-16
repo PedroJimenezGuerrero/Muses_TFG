@@ -45,6 +45,7 @@ classDiagram
         POLIMNIA
         URANIA
         CALÍOPE
+        +getPuntos(nivel: int)
     }
 
     %% Clases Principales
@@ -79,9 +80,8 @@ classDiagram
 
     class Musa:::item {
         +TipoMusa nombre
-        +Map~Nivel, Puntos~ nivelesPuntuacion
         +List~Token~ tokensColocados
-        +calcularPuntos()
+        +getPuntos(nivel: int)
     }
 
     %% Elementos de Juego
