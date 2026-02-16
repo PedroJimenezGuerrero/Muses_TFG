@@ -62,9 +62,10 @@ classDiagram
         +Posicion solPos
         +Posicion lunaPos
         +List~Musa~ grid
-        +moverAstros()
         +revoluciónSolar()
         +revoluciónLunar()
+        +rotarAstros()
+        +getMusasEnAstros()
     }
 
     class Jugador:::core {
