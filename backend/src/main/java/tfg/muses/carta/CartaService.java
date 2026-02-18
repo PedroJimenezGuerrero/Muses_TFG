@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import tfg.muses.partida.PartidaService;
+import tfg.muses.tablero.Tablero;
 
 @Service
 public class CartaService {
@@ -56,5 +57,9 @@ public class CartaService {
     public void deleteAllByPartida(Long partidaId) {
         List<CartaBase> cartas = partidaService.getCartasByPartida(partidaId);
         cartaRepository.deleteAll(cartas);
+    }
+
+    public void ejecutarEfecto(CartaBase carta, Tablero tablero) {
+        
     }
 }
