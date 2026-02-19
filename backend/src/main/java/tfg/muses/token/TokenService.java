@@ -1,9 +1,12 @@
 package tfg.muses.token;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import tfg.muses.jugador.Jugador;
+import tfg.muses.jugador.JugadorService;
 import tfg.muses.partida.PartidaService;
 
 @Service
@@ -14,6 +17,9 @@ public class TokenService {
 
     @Autowired
     private PartidaService partidaService;
+
+    @Autowired
+    private JugadorService jugadorService;
 
     /**
      * Crear un nuevo token
@@ -67,5 +73,24 @@ public class TokenService {
     public void deleteAllByPartida(Long partidaId) {
         List<Token> tokens = partidaService.getTokensByPartida(partidaId);
         tokenRepository.deleteAll(tokens);
+    }
+
+    public List<Token> colocarTokensByPlayer(int numeroTokens, Jugador jugador){
+        List<Token> tokens = new ArrayList<>();
+        for (int i = 0; i < numeroTokens; i++) {
+            Token token = jugadorService.getTokenNoColocado(jugador);
+            if (token != null) {
+                colocar(token);
+                tokens.add(token);
+            } else {
+                break;
+            }
+        }
+        return tokens;
+    }
+
+    private void colocar(Token token) {
+        token.setColocado(true);
+        tokenRepository.save(token);
     }
 }
