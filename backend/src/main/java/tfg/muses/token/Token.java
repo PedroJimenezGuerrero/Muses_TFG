@@ -9,6 +9,5 @@ import tfg.muses.baseEntity.BaseEntity;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class Token extends BaseEntity {
-    // Entidad simple por ahora, se puede extender si los tokens tienen más
-    // propiedades
+    boolean colocado;
 }
