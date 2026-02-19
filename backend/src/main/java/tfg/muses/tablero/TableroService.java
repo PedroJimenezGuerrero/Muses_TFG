@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import tfg.muses.musa.Musa;
+import tfg.muses.musa.TipoMusa;
 import tfg.muses.partida.Partida;
 import tfg.muses.partida.PartidaRepository;
 import tfg.muses.partida.PartidaService;
@@ -293,5 +294,10 @@ public class TableroService {
             default:
                 throw new InvalidParameterException("Posición de astro inválida: " + astroPos);
         }
+    }
+
+    public void inspiracion(Tablero tablero, TipoMusa caliope) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'inspiracion'");
     }
 }

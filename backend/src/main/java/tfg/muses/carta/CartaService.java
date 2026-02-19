@@ -1,6 +1,7 @@
 package tfg.muses.carta;
 
 import java.util.List;
+import tfg.muses.carta.strategy.CartaEffectStrategy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -59,7 +60,16 @@ public class CartaService {
         cartaRepository.deleteAll(cartas);
     }
 
+    @Autowired
+    private List<CartaEffectStrategy> strategies;
+
     public void ejecutarEfecto(CartaBase carta, Tablero tablero) {
-        
+        for (CartaEffectStrategy strategy : strategies) {
+            if (strategy.supports(carta)) {
+                strategy.execute(carta, tablero);
+                return;
+            }
+        }
+        throw new IllegalArgumentException("No strategy found for carta type: " + carta.getClass().getSimpleName());
     }
 }
