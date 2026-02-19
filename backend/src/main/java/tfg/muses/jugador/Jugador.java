@@ -34,7 +34,7 @@ public class Jugador extends BaseEntity {
     private List<CartaBase> mano;
 
     @OneToMany(cascade = CascadeType.ALL)
-    private List<Token> reservaTokens;
+    private List<Token> tokens;
 
     @ManyToOne(optional = false)
     private Usuario usuario;

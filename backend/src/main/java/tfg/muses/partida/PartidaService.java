@@ -100,7 +100,7 @@ public class PartidaService {
     }
 
     /**
-     * Obtener todos los tokens de una partida (de los jugadores y del tablero)
+     * Obtener todos los tokens de una partida
      */
     public List<Token> getTokensByPartida(Long partidaId) {
         List<Token> tokens = new ArrayList<>();
@@ -108,26 +108,13 @@ public class PartidaService {
         // Tokens de los jugadores (reserva)
         List<Jugador> jugadores = getJugadoresByPartida(partidaId);
         for (Jugador jugador : jugadores) {
-            if (jugador.getReservaTokens() != null) {
-                tokens.addAll(jugador.getReservaTokens());
-            }
+            tokens.addAll(jugador.getTokens());
         }
-        
-        // Tokens del tablero (colocados en las musas)
-        Tablero tablero = getTableroByPartida(partidaId);
-        if (tablero != null && tablero.getGrid() != null) {
-            for (Musa musa : tablero.getGrid()) {
-                if (musa.getTokensColocados() != null) {
-                    tokens.addAll(musa.getTokensColocados());
-                }
-            }
-        }
-        
         return tokens;
     }
 
     /**
-     * Obtener todas las musas de una partida (del tablero)
+     * Obtener todas las musas de una partida
      */
     public List<Musa> getMusasByPartida(Long partidaId) {
         Tablero tablero = getTableroByPartida(partidaId);

@@ -105,6 +105,8 @@ classDiagram
     }
 
     class Token:::item {
+        +boolean colocado
+        +
     }
 
     %% Relaciones
@@ -112,11 +114,11 @@ classDiagram
     Partida "1" *-- "3..5" Jugador : participan
     
     Tablero "1" *-- "9" Musa : compone
-    Musa "1" o-- "*" Token : contiene
+    Musa "1" o-- "*" Token : tiene
 
     Jugador "1" o-- "1" CartaInspiracion : posee
-    Jugador "1" o-- "4" CartaAccion : mano inicial
-    Jugador "1" *-- "*" Token : reserva
+    Jugador "1" o-- "4" CartaAccion : mano
+    Jugador "1" *-- "20" Token : tiene
 
     Carta <|-- CartaAccion
     Carta <|-- CartaInspiracion
