@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import tfg.muses.partida.PartidaService;
+import tfg.muses.token.Token;
 
 @Service
 public class JugadorService {
@@ -53,7 +54,7 @@ public class JugadorService {
             jugador.setPuntuacionTotal(jugadorActualizado.getPuntuacionTotal());
             jugador.setCartaInspiracion(jugadorActualizado.getCartaInspiracion());
             jugador.setMano(jugadorActualizado.getMano());
-            jugador.setReservaTokens(jugadorActualizado.getReservaTokens());
+            jugador.setTokens(jugadorActualizado.getTokens());
             jugador.setUsuario(jugadorActualizado.getUsuario());
             return jugadorRepository.save(jugador);
         }).orElse(null);
@@ -72,5 +73,12 @@ public class JugadorService {
     public void deleteAllByPartida(Long partidaId) {
         List<Jugador> jugadores = partidaService.getJugadoresByPartida(partidaId);
         jugadorRepository.deleteAll(jugadores);
+    }
+
+    public Token getTokenNoColocado(Jugador jugador) {
+        return jugador.getTokens().stream()
+                                    .filter(token -> !token.isColocado())
+                                    .findFirst()
+                                    .orElse(null);
     }
 }

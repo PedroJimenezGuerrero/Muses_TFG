@@ -8,11 +8,13 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import tfg.muses.jugador.Jugador;
 import tfg.muses.musa.Musa;
 import tfg.muses.musa.TipoMusa;
 import tfg.muses.partida.Partida;
 import tfg.muses.partida.PartidaRepository;
 import tfg.muses.partida.PartidaService;
+import tfg.muses.musa.MusaService;
 
 @Service
 public class TableroService {
@@ -25,6 +27,9 @@ public class TableroService {
 
     @Autowired
     private PartidaService partidaService;
+
+    @Autowired
+    private MusaService musaService;
 
     public Tablero rotarAstros(Tablero tablero) {
         Integer nuevaPosicionSol = tablero.getSolPos();
@@ -90,6 +95,7 @@ public class TableroService {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        save(tablero);
         return tablero;
     }
 
@@ -100,7 +106,20 @@ public class TableroService {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        save(tablero);
         return tablero;
+    }
+
+    public void devocionSol(Tablero tablero, Jugador jugador) {
+        Musa musaSol = getMusasEnAstros(tablero).get("sol");
+        musaService.colocarTokens(musaSol, 2, jugador);
+        save(tablero);
+    }
+
+    public void devocionLuna(Tablero tablero, Jugador jugador) {
+        Musa musaLuna = getMusasEnAstros(tablero).get("luna");
+        musaService.colocarTokens(musaLuna, 2, jugador);
+        save(tablero);
     }
 
     /*
@@ -251,7 +270,7 @@ public class TableroService {
     }
 
     /**
-     * Obtener las musas en las posiciones del sol y la luna (Lógica)
+     * Obtener las musas en las posiciones del sol y la luna
      */
     public Map<String, Musa> getMusasEnAstros(Tablero tablero) {
         int solGridIndex = mapAstroToGrid(tablero.getSolPos());

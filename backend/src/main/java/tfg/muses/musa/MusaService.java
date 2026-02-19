@@ -1,10 +1,14 @@
 package tfg.muses.musa;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import tfg.muses.jugador.Jugador;
 import tfg.muses.partida.PartidaService;
+import tfg.muses.token.Token;
+import tfg.muses.token.TokenService;
 
 @Service
 public class MusaService {
@@ -14,6 +18,9 @@ public class MusaService {
 
     @Autowired
     private PartidaService partidaService;
+
+    @Autowired
+    private TokenService tokenService;
 
     /**
      * Crear una nueva musa
@@ -67,5 +74,16 @@ public class MusaService {
     public void deleteAllByPartida(Long partidaId) {
         List<Musa> musas = partidaService.getMusasByPartida(partidaId);
         musaRepository.deleteAll(musas);
+    }
+
+    /**
+     * Colocar tokens en una musa
+     */
+    public void colocarTokens(Musa musa, int numeroTokens, Jugador jugador) {
+        List<Token> tokensColocados = tokenService.colocarTokensByPlayer(numeroTokens, jugador);
+        List<Token> tokensEnMusa = musa.getTokensColocados();
+        tokensEnMusa.addAll(tokensColocados);
+        musa.setTokensColocados(tokensEnMusa);
+        musaRepository.save(musa);
     }
 }

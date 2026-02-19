@@ -6,12 +6,13 @@ import org.springframework.stereotype.Component;
 import tfg.muses.carta.CartaAccion;
 import tfg.muses.carta.CartaBase;
 import tfg.muses.tablero.Tablero;
+import tfg.muses.tablero.TableroService;
 
 @Component
 public class AccionEffectStrategy implements CartaEffectStrategy {
 
     @Autowired
-    private tfg.muses.tablero.TableroService tableroService;
+    private TableroService tableroService;
 
     @Override
     public boolean supports(CartaBase carta) {
@@ -23,10 +24,10 @@ public class AccionEffectStrategy implements CartaEffectStrategy {
         CartaAccion cartaAccion = (CartaAccion) carta;
         switch (cartaAccion.getTipo()) {
             case DEVOCION_SOL:
-                // TODO: Implementar DEVOCION_SOL
+                // tableroService.devocionSol(tablero, jugador);
                 break;
             case DEVOCION_LUNA:
-                // TODO: Implementar DEVOCION_LUNA
+                // tableroService.devocionLuna(tablero, jugador);
                 break;
             case REVOLUCION_SOL:
                 tableroService.revolucionSolar(tablero);
