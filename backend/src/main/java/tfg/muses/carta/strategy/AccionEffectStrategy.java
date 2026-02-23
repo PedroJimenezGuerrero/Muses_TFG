@@ -7,6 +7,7 @@ import tfg.muses.carta.CartaAccion;
 import tfg.muses.carta.CartaBase;
 import tfg.muses.tablero.Tablero;
 import tfg.muses.tablero.TableroService;
+import tfg.muses.jugador.Jugador;
 
 @Component
 public class AccionEffectStrategy implements CartaEffectStrategy {
@@ -20,20 +21,20 @@ public class AccionEffectStrategy implements CartaEffectStrategy {
     }
 
     @Override
-    public void execute(CartaBase carta, Tablero tablero) {
+    public void execute(CartaBase carta, Tablero tablero, Jugador jugador) {
         CartaAccion cartaAccion = (CartaAccion) carta;
         switch (cartaAccion.getTipo()) {
             case DEVOCION_SOL:
-                // tableroService.devocionSol(tablero, jugador);
+                tableroService.devocionSol(tablero, jugador);
                 break;
             case DEVOCION_LUNA:
-                // tableroService.devocionLuna(tablero, jugador);
+                tableroService.devocionLuna(tablero, jugador);
                 break;
             case REVOLUCION_SOL:
-                tableroService.revolucionSolar(tablero);
+                tableroService.revolucionSolar(tablero, jugador);
                 break;
             case REVOLUCION_LUNA:
-                tableroService.revolucionLunar(tablero);
+                tableroService.revolucionLunar(tablero, jugador);
                 break;
             default:
                 throw new UnsupportedOperationException("TipoAccion no soportado: " + cartaAccion.getTipo());

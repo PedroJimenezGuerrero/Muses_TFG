@@ -11,3 +11,7 @@
 ## Devlog 2: 19/02/2026
 
 - Para poder colocar tokens en las musas es necesario un método en MusaService que llame a TokenService para obtener un token del jugador y lo coloque en la musa. Para esto se ha rediseñado ligeramente el modelo de dominio, se ha añadido un atributo llamado colocado en la entidad Token y se ha renombrado "reservaTokens" por "tokens". 
+
+## Devlog 3: 23/02/2026
+
+- Para poder aplicar los efectos de colocar los tokens es necesario saber quién hace cada acción, por lo que es necesario refactorizar los métodos de TableroService para que reciban el jugador que realiza la acción. Esto implica también cambiar TableroController, y cambiar la ruta de los endpoints de revolución solar y revolución lunar para que reciban el id del jugador. A partir de ese jugador, se puede sacar en qué partida está y aplicar la acción al tablero correspondiente.

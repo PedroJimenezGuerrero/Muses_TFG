@@ -31,6 +31,73 @@ public class TableroService {
     @Autowired
     private MusaService musaService;
 
+    // Métodos CRUD
+
+    public Tablero getById(Long id) {
+        return tableroRepository.findById(id).orElse(null);
+    }
+
+    public Tablero getByPartidaId(Long partidaId) {
+        Partida partida = partidaRepository.findById(partidaId).orElse(null);
+        if (partida != null) {
+            return partida.getTablero();
+        }
+        return null;
+    }
+
+    public Tablero save(Tablero tablero) {
+        return tableroRepository.save(tablero);
+    }
+
+    /**
+     * Obtener todos los tableros
+     */
+    public List<Tablero> getAll() {
+        return tableroRepository.findAll();
+    }
+
+    /**
+     * Actualizar un tablero existente
+     */
+    public Tablero update(Long id, Tablero tableroActualizado) {
+        return tableroRepository.findById(id).map(tablero -> {
+            tablero.setSolPos(tableroActualizado.getSolPos());
+            tablero.setLunaPos(tableroActualizado.getLunaPos());
+            tablero.setGrid(tableroActualizado.getGrid());
+            return tableroRepository.save(tablero);
+        }).orElse(null);
+    }
+
+    /**
+     * Eliminar un tablero por su ID
+     */
+    public void delete(Long id) {
+        tableroRepository.deleteById(id);
+    }
+
+    /**
+     * Eliminar el tablero de una partida
+     */
+    public void deleteAllByPartida(Long partidaId) {
+        Tablero tablero = partidaService.getTableroByPartida(partidaId);
+        if (tablero != null) {
+            tableroRepository.delete(tablero);
+        }
+    }
+
+    /**
+     * Obtener el tablero en el que juega un jugador
+     */
+    public Tablero getByPlayerId(Long playerId) {
+        Partida partida = partidaService.getByJugadorId(playerId);
+        if (partida != null) {
+            return partida.getTablero();
+        }
+        return null;
+    }
+
+    // Funciones de Tablero
+    
     public Tablero rotarAstros(Tablero tablero) {
         Integer nuevaPosicionSol = tablero.getSolPos();
         Integer nuevaPosicionLuna = tablero.getLunaPos();
@@ -49,6 +116,108 @@ public class TableroService {
         }
         return tablero;
     }
+
+    public Tablero revolucionSolar(Tablero tablero, Jugador jugador) {
+        Integer posicionSol = tablero.getSolPos();
+        try {
+            tablero = revolucion(tablero, posicionSol);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        Musa musaSol = getMusasEnAstros(tablero).get("sol");
+        musaService.colocarTokens(musaSol, 1, jugador);
+        save(tablero);
+        return tablero;
+    }
+
+    public Tablero revolucionLunar(Tablero tablero, Jugador jugador) {
+        Integer posicionLuna = tablero.getLunaPos();
+        try {
+            tablero = revolucion(tablero, posicionLuna);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        Musa musaLuna = getMusasEnAstros(tablero).get("luna");
+        musaService.colocarTokens(musaLuna, 1, jugador);
+        save(tablero);
+        return tablero;
+    }
+
+    public void devocionSol(Tablero tablero, Jugador jugador) {
+        Musa musaSol = getMusasEnAstros(tablero).get("sol");
+        musaService.colocarTokens(musaSol, 2, jugador);
+        save(tablero);
+    }
+
+    public void devocionLuna(Tablero tablero, Jugador jugador) {
+        Musa musaLuna = getMusasEnAstros(tablero).get("luna");
+        musaService.colocarTokens(musaLuna, 2, jugador);
+        save(tablero);
+    }
+
+    public void inspiracion(Tablero tablero, TipoMusa musa, Jugador jugador) {
+        
+    }
+
+    /**
+     * Obtener las musas en las posiciones del sol y la luna
+     */
+    public Map<String, Musa> getMusasEnAstros(Tablero tablero) {
+        int solGridIndex = mapAstroToGrid(tablero.getSolPos());
+        int lunaGridIndex = mapAstroToGrid(tablero.getLunaPos());
+
+        Musa musaSol = tablero.getGrid().get(solGridIndex);
+        Musa musaLuna = tablero.getGrid().get(lunaGridIndex);
+
+        Map<String, Musa> result = new HashMap<>();
+        result.put("sol", musaSol);
+        result.put("luna", musaLuna);
+
+        return result;
+    }
+
+    /**
+     * Obtener las musas en las posiciones del sol y la luna por ID
+     */
+    public Map<String, Musa> getMusasEnAstros(Long tableroId) {
+        Tablero tablero = getById(tableroId);
+        if (tablero == null) {
+            throw new IllegalArgumentException("El tablero con id " + tableroId + " no existe.");
+        }
+        return getMusasEnAstros(tablero);
+    }
+
+    // Métodos privados
+
+    /**
+     * Mapear la posición del astro a la posición en el grid
+     * 
+     * @param astroPos Posición del astro (0-7)
+     * @return Posición en el grid (0-8)
+     */
+    private int mapAstroToGrid(int astroPos) {
+        switch (astroPos) {
+            case 0:
+                return 0;
+            case 1:
+                return 1;
+            case 2:
+                return 2;
+            case 3:
+                return 5;
+            case 4:
+                return 8;
+            case 5:
+                return 7;
+            case 6:
+                return 6;
+            case 7:
+                return 3;
+            default:
+                throw new InvalidParameterException("Posición de astro inválida: " + astroPos);
+        }
+    }
+
 
     private Tablero revolucion(Tablero tablero, Integer posicionAstro) throws Exception {
         List<Musa> grid = tablero.getGrid();
@@ -86,40 +255,6 @@ public class TableroService {
 
         return tablero;
 
-    }
-
-    public Tablero revolucionSolar(Tablero tablero) {
-        Integer posicionSol = tablero.getSolPos();
-        try {
-            tablero = revolucion(tablero, posicionSol);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        save(tablero);
-        return tablero;
-    }
-
-    public Tablero revolucionLunar(Tablero tablero) {
-        Integer posicionLuna = tablero.getLunaPos();
-        try {
-            tablero = revolucion(tablero, posicionLuna);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        save(tablero);
-        return tablero;
-    }
-
-    public void devocionSol(Tablero tablero, Jugador jugador) {
-        Musa musaSol = getMusasEnAstros(tablero).get("sol");
-        musaService.colocarTokens(musaSol, 2, jugador);
-        save(tablero);
-    }
-
-    public void devocionLuna(Tablero tablero, Jugador jugador) {
-        Musa musaLuna = getMusasEnAstros(tablero).get("luna");
-        musaService.colocarTokens(musaLuna, 2, jugador);
-        save(tablero);
     }
 
     /*
@@ -206,117 +341,4 @@ public class TableroService {
         return grid;
     }
 
-    public Tablero getById(Long id) {
-        return tableroRepository.findById(id).orElse(null);
-    }
-
-    public Tablero getByPartidaId(Long partidaId) {
-        Partida partida = partidaRepository.findById(partidaId).orElse(null);
-        if (partida != null) {
-            return partida.getTablero();
-        }
-        return null;
-    }
-
-    public Tablero save(Tablero tablero) {
-        return tableroRepository.save(tablero);
-    }
-
-    /**
-     * Obtener todos los tableros
-     */
-    public List<Tablero> getAll() {
-        return tableroRepository.findAll();
-    }
-
-    /**
-     * Actualizar un tablero existente
-     */
-    public Tablero update(Long id, Tablero tableroActualizado) {
-        return tableroRepository.findById(id).map(tablero -> {
-            tablero.setSolPos(tableroActualizado.getSolPos());
-            tablero.setLunaPos(tableroActualizado.getLunaPos());
-            tablero.setGrid(tableroActualizado.getGrid());
-            return tableroRepository.save(tablero);
-        }).orElse(null);
-    }
-
-    /**
-     * Eliminar un tablero por su ID
-     */
-    public void delete(Long id) {
-        tableroRepository.deleteById(id);
-    }
-
-    /**
-     * Eliminar el tablero de una partida
-     */
-    public void deleteAllByPartida(Long partidaId) {
-        Tablero tablero = partidaService.getTableroByPartida(partidaId);
-        if (tablero != null) {
-            tableroRepository.delete(tablero);
-        }
-    }
-
-    /**
-     * Obtener las musas en las posiciones del sol y la luna por ID
-     */
-    public Map<String, Musa> getMusasEnAstros(Long tableroId) {
-        Tablero tablero = getById(tableroId);
-        if (tablero == null) {
-            throw new IllegalArgumentException("El tablero con id " + tableroId + " no existe.");
-        }
-        return getMusasEnAstros(tablero);
-    }
-
-    /**
-     * Obtener las musas en las posiciones del sol y la luna
-     */
-    public Map<String, Musa> getMusasEnAstros(Tablero tablero) {
-        int solGridIndex = mapAstroToGrid(tablero.getSolPos());
-        int lunaGridIndex = mapAstroToGrid(tablero.getLunaPos());
-
-        Musa musaSol = tablero.getGrid().get(solGridIndex);
-        Musa musaLuna = tablero.getGrid().get(lunaGridIndex);
-
-        Map<String, Musa> result = new HashMap<>();
-        result.put("sol", musaSol);
-        result.put("luna", musaLuna);
-
-        return result;
-    }
-
-    /**
-     * Mapear la posición del astro a la posición en el grid
-     * 
-     * @param astroPos Posición del astro (0-7)
-     * @return Posición en el grid (0-8)
-     */
-    private int mapAstroToGrid(int astroPos) {
-        switch (astroPos) {
-            case 0:
-                return 0;
-            case 1:
-                return 1;
-            case 2:
-                return 2;
-            case 3:
-                return 5;
-            case 4:
-                return 8;
-            case 5:
-                return 7;
-            case 6:
-                return 6;
-            case 7:
-                return 3;
-            default:
-                throw new InvalidParameterException("Posición de astro inválida: " + astroPos);
-        }
-    }
-
-    public void inspiracion(Tablero tablero, TipoMusa caliope) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'inspiracion'");
-    }
 }

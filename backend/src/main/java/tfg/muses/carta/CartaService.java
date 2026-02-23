@@ -2,6 +2,8 @@ package tfg.muses.carta;
 
 import java.util.List;
 import tfg.muses.carta.strategy.CartaEffectStrategy;
+import tfg.muses.jugador.Jugador;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -63,10 +65,10 @@ public class CartaService {
     @Autowired
     private List<CartaEffectStrategy> strategies;
 
-    public void ejecutarEfecto(CartaBase carta, Tablero tablero) {
+    public void ejecutarEfecto(CartaBase carta, Tablero tablero, Jugador jugador) {
         for (CartaEffectStrategy strategy : strategies) {
             if (strategy.supports(carta)) {
-                strategy.execute(carta, tablero);
+                strategy.execute(carta, tablero, jugador);
                 return;
             }
         }

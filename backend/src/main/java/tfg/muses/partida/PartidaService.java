@@ -120,4 +120,11 @@ public class PartidaService {
         Tablero tablero = getTableroByPartida(partidaId);
         return tablero != null && tablero.getGrid() != null ? tablero.getGrid() : new ArrayList<>();
     }
+
+    /**
+     * Obtener la partida de un jugador
+     */
+    public Partida getByJugadorId(Long jugadorId) {
+        return partidaRepository.findByJugadoresId(jugadorId).orElse(null);
+    }
 }
