@@ -2,6 +2,8 @@ package tfg.muses.tablero;
 
 import org.springframework.web.bind.annotation.RestController;
 
+import tfg.muses.jugador.Jugador;
+import tfg.muses.jugador.JugadorService;
 import tfg.muses.musa.Musa;
 
 import org.springframework.web.bind.annotation.PutMapping;
@@ -23,28 +25,33 @@ public class TableroController {
     @Autowired
     private TableroService tableroService;
 
+    @Autowired
+    private JugadorService jugadorService;
+
     @PutMapping("rotarAstros/{id}")
     public Tablero rotarAstros(@PathVariable Long id) {
         Tablero tablero = tableroService.getById(id);
         return tableroService.rotarAstros(tablero);
     }
 
-    @PutMapping("revolucionSolar/{id}")
-    public Tablero revolucionSolar(@PathVariable Long id) {
-        Tablero tablero = tableroService.getById(id);
+    @PutMapping("revolucionSolar/{jugadorId}")
+    public Tablero revolucionSolar(@PathVariable Long jugadorId) {
+        Tablero tablero = tableroService.getByPlayerId(jugadorId);
+        Jugador jugador = jugadorService.getById(jugadorId);
         try {
-            tablero = tableroService.revolucionSolar(tablero);
+            tablero = tableroService.revolucionSolar(tablero, jugador);
         } catch (Exception e) {
             e.printStackTrace();
         }
         return tablero;
     }
 
-    @PutMapping("revolucionLunar/{id}")
-    public Tablero revolucionLunar(@PathVariable Long id) {
-        Tablero tablero = tableroService.getById(id);
+    @PutMapping("revolucionLunar/{jugadorId}")
+    public Tablero revolucionLunar(@PathVariable Long jugadorId) {
+        Tablero tablero = tableroService.getByPlayerId(jugadorId);
+        Jugador jugador = jugadorService.getById(jugadorId);
         try {
-            tablero = tableroService.revolucionLunar(tablero);
+            tablero = tableroService.revolucionLunar(tablero, jugador);
         } catch (Exception e) {
             e.printStackTrace();
         }
