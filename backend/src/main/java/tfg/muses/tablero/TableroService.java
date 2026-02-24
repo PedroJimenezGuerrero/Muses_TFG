@@ -155,10 +155,6 @@ public class TableroService {
         save(tablero);
     }
 
-    public void inspiracion(Tablero tablero, TipoMusa musa, Jugador jugador) {
-        
-    }
-
     /**
      * Obtener las musas en las posiciones del sol y la luna
      */

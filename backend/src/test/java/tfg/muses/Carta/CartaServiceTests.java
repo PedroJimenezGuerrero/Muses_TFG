@@ -61,7 +61,7 @@ public class CartaServiceTests {
         injectField(cartaService, "strategies", strategies);
 
         cartaInspiracion = new CartaInspiracion();
-        cartaInspiracion.setMusaObjetivo(TipoMusa.CALIOPE);
+        cartaInspiracion.setNombreMusa(TipoMusa.CALIOPE);
         cartaInspiracion.setUsada(false);
 
         cartaAccion = new CartaAccion();
