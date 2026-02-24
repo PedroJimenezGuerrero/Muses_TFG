@@ -15,3 +15,18 @@
 ## Devlog 3: 23/02/2026
 
 - Para poder aplicar los efectos de colocar los tokens es necesario saber quién hace cada acción, por lo que es necesario refactorizar los métodos de TableroService para que reciban el jugador que realiza la acción. Esto implica también cambiar TableroController, y cambiar la ruta de los endpoints de revolución solar y revolución lunar para que reciban el id del jugador. A partir de ese jugador, se puede sacar en qué partida está y aplicar la acción al tablero correspondiente.
+
+## Devlog 4: 24/02/2026
+
+- Se han expandido los tests de las entidades Tablero y Carta con pruebas unitarias exhaustivas para el servicio y controlador. Para ello se ha usado Claude Sonnet 4.6 con el siguiente prompt:
+
+    > genera tests unitarios y de integración para los controladores, servicios y repositorios de las entidades Tablero y Carta, teniendo en cuenta edge cases, manejo de errores y no siguiendo únicamente el happy path
+    >
+    > TableroServiceTests.java#L443-452 este test no lo entiendo. por qué debería el switch lanzar la excepción, si el talbero tiene las posiciones de los astros?
+    >
+    > perfecto, gracias. revisa todos los tests para que no pase lo mismo en otras partes del código
+    
+    Generó gran cantidad de tests correctos salvo uno que no tenía sentido, se le pidió que lo arreglase y comprobase que no había pasado lo mismo en otros lugares.
+
+-  
+
