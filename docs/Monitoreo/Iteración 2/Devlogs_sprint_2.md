@@ -28,5 +28,7 @@
     
     Generó gran cantidad de tests correctos salvo uno que no tenía sentido, se le pidió que lo arreglase y comprobase que no había pasado lo mismo en otros lugares.
 
--  
+- Las cartas de inspiración sólo pueden aplicar su efecto si los tokens de sol y luna están en la posición correcta. Para ello se ha refactorizado el enum TipoMusa, añadiendo un nuevo atributo de tipo TipoInspiración que puede tomar los valores `VERTICES` o `LADOS`, según si la inspiración de esa musa requiere que los astros estén en las esquinas o en los lados. 
+- Se ha añadido un método en InspiracionEffectStrategy que comprueba la posición de los astros y la compara con el tipo de inspiración de la carta. 
+- Para elegir qué método usar según la carta de inspiración, se ha usado otro patrón strategy, teniendo un método de alto nivel `ejecutarEfecto`, que según el tipo de musa que sea realizará una acción u otra.
 

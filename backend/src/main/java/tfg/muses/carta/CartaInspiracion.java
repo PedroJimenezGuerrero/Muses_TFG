@@ -15,7 +15,7 @@ import tfg.muses.musa.TipoMusa;
 public class CartaInspiracion extends CartaBase {
 
     @Enumerated(EnumType.STRING)
-    private TipoMusa musaObjetivo;
+    private TipoMusa nombreMusa;
 
     private boolean usada;
 }
