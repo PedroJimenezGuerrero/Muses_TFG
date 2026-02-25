@@ -1,7 +1,6 @@
 package tfg.muses.Carta;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.lang.reflect.Field;
@@ -22,8 +21,11 @@ import tfg.muses.carta.TipoAccion;
 import tfg.muses.carta.strategy.AccionEffectStrategy;
 import tfg.muses.carta.strategy.CartaEffectStrategy;
 import tfg.muses.carta.strategy.InspiracionEffectStrategy;
+import tfg.muses.carta.strategy.inspiracion.InspiracionCaliopeStrategy;
+import tfg.muses.carta.strategy.inspiracion.InspiracionMusaStrategy;
 import tfg.muses.jugador.Jugador;
 import tfg.muses.musa.Musa;
+import tfg.muses.musa.MusaService;
 import tfg.muses.musa.TipoMusa;
 import tfg.muses.partida.PartidaService;
 import tfg.muses.tablero.Tablero;
@@ -35,6 +37,7 @@ public class CartaServiceTests {
     private CartaRepository cartaRepository;
     private PartidaService partidaService;
     private TableroService tableroService;
+    private MusaService musaService;
 
     private CartaAccion cartaAccion;
     private CartaInspiracion cartaInspiracion;
@@ -51,11 +54,17 @@ public class CartaServiceTests {
         injectField(cartaService, "cartaRepository", cartaRepository);
         injectField(cartaService, "partidaService", partidaService);
 
+        musaService = mock(MusaService.class);
+
         AccionEffectStrategy accionStrategy = new AccionEffectStrategy();
         injectField(accionStrategy, "tableroService", tableroService);
 
+        InspiracionCaliopeStrategy caliopeStrategy = new InspiracionCaliopeStrategy();
+        injectField(caliopeStrategy, "musaService", musaService);
+
         InspiracionEffectStrategy inspiracionStrategy = new InspiracionEffectStrategy();
-        injectField(inspiracionStrategy, "tableroService", tableroService);
+        List<InspiracionMusaStrategy> musaStrategies = List.of(caliopeStrategy);
+        injectField(inspiracionStrategy, "strategies", musaStrategies);
 
         List<CartaEffectStrategy> strategies = Arrays.asList(accionStrategy, inspiracionStrategy);
         injectField(cartaService, "strategies", strategies);
@@ -223,12 +232,10 @@ public class CartaServiceTests {
 
     @Test
     public void ejecutarEfectoCartaInspiracionNoUsada() {
-        doNothing().when(tableroService).inspiracion(any(Tablero.class), any(TipoMusa.class), any(Jugador.class));
-
         cartaService.ejecutarEfecto(cartaInspiracion, tablero, jugador);
 
-        verify(tableroService).inspiracion(tablero, TipoMusa.CALIOPE, jugador);
-        assertTrue(cartaInspiracion.isUsada());
+        verify(musaService).colocarTokens(tablero.getGrid().get(6), 1, jugador);
+        verify(musaService).colocarTokens(tablero.getGrid().get(2), 1, jugador);
     }
 
     @Test
