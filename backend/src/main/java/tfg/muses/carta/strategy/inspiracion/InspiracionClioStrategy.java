@@ -13,14 +13,14 @@ import tfg.muses.musa.MusaService;
 import tfg.muses.jugador.Jugador;
 
 @Component
-public class InspiracionUraniaStrategy implements InspiracionMusaStrategy {
+public class InspiracionClioStrategy implements InspiracionMusaStrategy {
 
     @Autowired
     private MusaService musaService;
-    
+
     @Override
     public boolean supports(CartaInspiracion carta) {
-        return carta.getNombreMusa() == TipoMusa.URANIA;
+        return carta.getNombreMusa() == TipoMusa.CLIO;
     }
 
     @Override
@@ -28,20 +28,20 @@ public class InspiracionUraniaStrategy implements InspiracionMusaStrategy {
         int posicionSol = tablero.getSolPos();
         Musa musaObjetivo = null;
         switch (posicionSol) {
-            case 0:
-                musaObjetivo = tablero.getGrid().get(3);
-                musaService.colocarTokens(musaObjetivo, 2, jugador);
-                break;
-            case 2:
-                musaObjetivo = tablero.getGrid().get(1);
-                musaService.colocarTokens(musaObjetivo, 2, jugador);
-                break;
-            case 4:
+            case 1:
                 musaObjetivo = tablero.getGrid().get(5);
                 musaService.colocarTokens(musaObjetivo, 2, jugador);
                 break;
-            case 6:
+            case 3:
                 musaObjetivo = tablero.getGrid().get(7);
+                musaService.colocarTokens(musaObjetivo, 2, jugador);
+                break;
+            case 5:
+                musaObjetivo = tablero.getGrid().get(3);
+                musaService.colocarTokens(musaObjetivo, 2, jugador);
+                break;
+            case 7:
+                musaObjetivo = tablero.getGrid().get(1);
                 musaService.colocarTokens(musaObjetivo, 2, jugador);
                 break;
             default:
