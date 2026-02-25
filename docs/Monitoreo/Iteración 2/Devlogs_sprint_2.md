@@ -32,3 +32,6 @@
 - Se ha añadido un método en InspiracionEffectStrategy que comprueba la posición de los astros y la compara con el tipo de inspiración de la carta. 
 - Para elegir qué método usar según la carta de inspiración, se ha usado otro patrón strategy, teniendo un método de alto nivel `ejecutarEfecto`, que según el tipo de musa que sea realizará una acción u otra.
 
+## Devlog 5: 25/02/2026
+
+- Dado que el efecto de las cartas de inspiración depende de la posición de los astros y, según las reglas, hay que girar la carta para que los astros de la carta coincidan con los del tablero, hay que comprobar la posición de estos para saber sobre qué musa aplicar el efecto.
