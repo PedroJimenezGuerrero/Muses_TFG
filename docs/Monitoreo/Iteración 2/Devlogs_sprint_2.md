@@ -35,3 +35,17 @@
 ## Devlog 5: 25/02/2026
 
 - Dado que el efecto de las cartas de inspiración depende de la posición de los astros y, según las reglas, hay que girar la carta para que los astros de la carta coincidan con los del tablero, hay que comprobar la posición de estos para saber sobre qué musa aplicar el efecto.
+
+## Devlog 6: 26/02/2026
+
+- Se va a trabajar en la Issue 11: Resolver los conflictos de prioridad en las cartas jugadas. Se realizará la acción que más jugadores hayan elegido, y en caso de empate o de que ninguna carta coincida, se aplicará la siguiente prioridad:
+  1. Inspiración
+  2. Devoción Solar
+  3. Revolución Solar
+  4. Revolución Lunar
+  5. Devoción Lunar
+- Para implementarlo se va a usar un método en JugadorService llamado "jugarCarta" que gestionará el proceso. Por ello hay que trabajar primero en la Issue 10:Seleccionar la carta de acción desde la mano del jugador, para que sirva de base.
+- 
+
+
+  
