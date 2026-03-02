@@ -1,14 +1,16 @@
 package tfg.muses.partida;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import tfg.muses.exception.ResourceNotFoundException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +35,9 @@ public class PartidaService {
     @Autowired
     private JugadorService jugadorService;
 
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
     /**
      * Crear una nueva partida
      */
@@ -40,11 +45,9 @@ public class PartidaService {
         return partidaRepository.save(partida);
     }
 
-    /**
-     * Obtener una partida por su ID
-     */
     public Partida getById(Long id) {
-        return partidaRepository.findById(id).orElse(null);
+        return partidaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Partida", id));
     }
 
     /**
@@ -54,21 +57,17 @@ public class PartidaService {
         return partidaRepository.findAll();
     }
 
-    /**
-     * Actualizar una partida existente
-     */
     public Partida update(Long id, Partida partidaActualizada) {
-        return partidaRepository.findById(id).map(partida -> {
-            partida.setRondaActual(partidaActualizada.getRondaActual());
-            partida.setMaxRondas(partidaActualizada.getMaxRondas());
-            partida.setDuracionTotal(partidaActualizada.getDuracionTotal());
-            partida.setFechaInicio(partidaActualizada.getFechaInicio());
-            partida.setFechaFin(partidaActualizada.getFechaFin());
-            partida.setTablero(partidaActualizada.getTablero());
-            partida.setJugadores(partidaActualizada.getJugadores());
-            partida.setGanador(partidaActualizada.getGanador());
-            return partidaRepository.save(partida);
-        }).orElse(null);
+        Partida partida = getById(id);
+        partida.setRondaActual(partidaActualizada.getRondaActual());
+        partida.setMaxRondas(partidaActualizada.getMaxRondas());
+        partida.setDuracionTotal(partidaActualizada.getDuracionTotal());
+        partida.setFechaInicio(partidaActualizada.getFechaInicio());
+        partida.setFechaFin(partidaActualizada.getFechaFin());
+        partida.setTablero(partidaActualizada.getTablero());
+        partida.setJugadores(partidaActualizada.getJugadores());
+        partida.setGanador(partidaActualizada.getGanador());
+        return partidaRepository.save(partida);
     }
 
     /**
@@ -85,24 +84,16 @@ public class PartidaService {
         partidaRepository.deleteAll();
     }
 
-    /**
-     * Obtener el tablero de una partida
-     */
     public Tablero getTableroByPartida(Long partidaId) {
-        Partida partida = getById(partidaId);
-        return partida != null ? partida.getTablero() : null;
+        return getById(partidaId).getTablero();
     }
 
-    /**
-     * Obtener los jugadores de una partida
-     */
     public List<Jugador> getJugadoresByPartida(Long partidaId) {
-        Partida partida = getById(partidaId);
-        return partida != null ? partida.getJugadores() : new ArrayList<>();
+        return getById(partidaId).getJugadores();
     }
 
     /**
-     * Obtener todas las cartas de una partida (de la mano de todos los jugadores)
+     * Obtener todas las cartas de una partida
      */
     public List<CartaBase> getCartasByPartida(Long partidaId) {
         List<CartaBase> cartas = new ArrayList<>();
@@ -137,14 +128,10 @@ public class PartidaService {
         return tablero != null && tablero.getGrid() != null ? tablero.getGrid() : new ArrayList<>();
     }
 
-    /**
-     * Obtener la partida de un jugador
-     */
     public Partida getByJugadorId(Long jugadorId) {
-        return partidaRepository.findByJugadoresId(jugadorId).orElse(null);
+        return partidaRepository.findByJugadoresId(jugadorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Partida del jugador", jugadorId));
     }
-
-
 
     @Retryable(value = OptimisticLockingFailureException.class, maxRetries = 5)
     public void seleccionarCarta(Long partidaId, Long jugadorId, Long cartaId) {
@@ -166,11 +153,16 @@ public class PartidaService {
 
         Map<Long, Long> selecciones = partida.getSeleccionesRonda();
         List<CartaBase> cartasOrdenadasPorVotos = obtenerCartasOrdenadas(selecciones);
-        cartasOrdenadasPorVotos.forEach(cartaBase -> cartaService.ejecutarEfecto(cartaBase, partida.getTablero(), jugador));
 
-        // TODO: notificar al websocket
+        // Avisa mediante websocket al frontend de que ya se han seleccionado todas las
+        // cartas
+        messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/cartas-seleccionadas",
+                cartasOrdenadasPorVotos);
+
+        cartasOrdenadasPorVotos
+                .forEach(cartaBase -> cartaService.ejecutarEfecto(cartaBase, partida.getTablero(), jugador));
+
     }
-
 
     private List<CartaBase> obtenerCartasOrdenadas(Map<Long, Long> selecciones) {
         Map<Long, Long> votosPorCarta = new HashMap<>();
