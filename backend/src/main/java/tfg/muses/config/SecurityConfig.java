@@ -19,7 +19,9 @@ public class SecurityConfig {
                 .cors(withDefaults()) // Uses the configuration from WebConfig
                 .csrf(AbstractHttpConfigurer::disable) // Disable CSRF for simplicity in development
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/status").permitAll() // Public access
+                        .requestMatchers("/status").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/ronda/**").permitAll()
                         .anyRequest().authenticated());
 
         return http.build();
