@@ -45,7 +45,14 @@
   4. Revolución Lunar
   5. Devoción Lunar
 - Para implementarlo se va a usar un método en JugadorService llamado "jugarCarta" que gestionará el proceso. Por ello hay que trabajar primero en la Issue 10:Seleccionar la carta de acción desde la mano del jugador, para que sirva de base.
-- 
 
+## Devlog 7: 28/02/2026
 
+- Cuando un jugador selecciona una carta, su elección se guarda en un nuevo atributo de Partida llamado "seleccionesRonda" que es un mapa que asocia el id del jugador con el id de la carta seleccionada. Para ello se ha añadido un método en PartidaService llamado "seleccionarCarta" que gestionará el proceso. Los problemas de concurrencia se gestionan mediante bloqueo optimista con un sistema de versiones para la entidad Partida, y reintentos cuando se produzca un conflicto.
+
+## Devlog 8: 02/03/2026
+
+- Se ha refactorizado el método `seleccionarCarta` a PartiaService
+- Dicho método llama a `gestionarSeleccionCartas`, que actualiza el atributo `seleccionesRonda` de la partida y ejecuta los efectos de las cartas seleccionadas por orden según la cantidad de jugadores que las han seleccionado.
+ 
   

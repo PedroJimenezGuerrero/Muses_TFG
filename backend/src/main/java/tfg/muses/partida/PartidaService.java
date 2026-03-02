@@ -1,12 +1,22 @@
 package tfg.muses.partida;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import tfg.muses.carta.CartaBase;
+import tfg.muses.carta.CartaService;
 import tfg.muses.jugador.Jugador;
+import tfg.muses.jugador.JugadorService;
 import tfg.muses.musa.Musa;
 import tfg.muses.tablero.Tablero;
 import tfg.muses.token.Token;
@@ -16,6 +26,12 @@ public class PartidaService {
 
     @Autowired
     private PartidaRepository partidaRepository;
+
+    @Autowired
+    private CartaService cartaService;
+
+    @Autowired
+    private JugadorService jugadorService;
 
     /**
      * Crear una nueva partida
@@ -104,7 +120,7 @@ public class PartidaService {
      */
     public List<Token> getTokensByPartida(Long partidaId) {
         List<Token> tokens = new ArrayList<>();
-        
+
         // Tokens de los jugadores (reserva)
         List<Jugador> jugadores = getJugadoresByPartida(partidaId);
         for (Jugador jugador : jugadores) {
@@ -126,5 +142,53 @@ public class PartidaService {
      */
     public Partida getByJugadorId(Long jugadorId) {
         return partidaRepository.findByJugadoresId(jugadorId).orElse(null);
+    }
+
+
+
+    @Retryable(value = OptimisticLockingFailureException.class, maxRetries = 5)
+    public void seleccionarCarta(Long partidaId, Long jugadorId, Long cartaId) {
+        Partida partida = getById(partidaId);
+        Jugador jugador = jugadorService.getById(jugadorId);
+
+        partida.getSeleccionesRonda().put(jugadorId, cartaId);
+        gestionarSeleccionCartas(partida, jugador);
+    }
+
+    // Métodos privados
+
+    @Transactional
+    private void gestionarSeleccionCartas(Partida partida, Jugador jugador) {
+        update(partida.getId(), partida);
+        if (!todosJugadoresHanSeleccionadoCarta(partida)) {
+            return;
+        }
+
+        Map<Long, Long> selecciones = partida.getSeleccionesRonda();
+        List<CartaBase> cartasOrdenadasPorVotos = obtenerCartasOrdenadas(selecciones);
+        cartasOrdenadasPorVotos.forEach(cartaBase -> cartaService.ejecutarEfecto(cartaBase, partida.getTablero(), jugador));
+
+        // TODO: notificar al websocket
+    }
+
+
+    private List<CartaBase> obtenerCartasOrdenadas(Map<Long, Long> selecciones) {
+        Map<Long, Long> votosPorCarta = new HashMap<>();
+        for (Long cartaId : selecciones.values()) {
+            votosPorCarta.merge(cartaId, 1L, Long::sum);
+        }
+
+        List<CartaBase> cartasOrdenadasPorVotos = votosPorCarta.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                // TODO: añadir desempate por prioridad
+                .map(Map.Entry::getKey)
+                .map(cartaId -> cartaService.getById(cartaId))
+                .toList();
+
+        return cartasOrdenadasPorVotos;
+    }
+
+    private boolean todosJugadoresHanSeleccionadoCarta(Partida partida) {
+        return partida.getSeleccionesRonda().size() == partida.getJugadores().size();
     }
 }
