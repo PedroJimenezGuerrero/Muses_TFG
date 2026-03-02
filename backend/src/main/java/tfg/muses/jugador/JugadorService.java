@@ -77,8 +77,8 @@ public class JugadorService {
 
     public Token getTokenNoColocado(Jugador jugador) {
         return jugador.getTokens().stream()
-                                    .filter(token -> !token.isColocado())
-                                    .findFirst()
-                                    .orElse(null);
+                .filter(token -> !token.isColocado())
+                .findFirst()
+                .orElse(null);
     }
 }
