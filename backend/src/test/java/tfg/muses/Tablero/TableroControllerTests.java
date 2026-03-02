@@ -6,7 +6,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import jakarta.servlet.ServletException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -159,14 +158,13 @@ public class TableroControllerTests {
     }
 
     @Test
-    public void getMusasEnAstrosLanzaExcepcionCuandoTableroNoExiste() {
+    public void getMusasEnAstrosRetorna400CuandoTableroNoExiste() throws Exception {
         when(tableroService.getMusasEnAstros(99L))
                 .thenThrow(new IllegalArgumentException("El tablero con id 99 no existe."));
 
-        // Spring MVC relanza la IllegalArgumentException envuelta en ServletException
-        // cuando no hay @ExceptionHandler configurado
-        org.junit.jupiter.api.Assertions.assertThrows(ServletException.class,
-                () -> mockMvc.perform(get("/tablero/getMusasEnAstros/99")));
+        mockMvc.perform(get("/tablero/getMusasEnAstros/99"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("El tablero con id 99 no existe."));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
