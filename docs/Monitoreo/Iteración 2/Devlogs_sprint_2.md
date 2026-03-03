@@ -55,4 +55,7 @@
 - Se ha refactorizado el método `seleccionarCarta` a PartiaService
 - Dicho método llama a `gestionarSeleccionCartas`, que actualiza el atributo `seleccionesRonda` de la partida y ejecuta los efectos de las cartas seleccionadas por orden según la cantidad de jugadores que las han seleccionado.
  
-  
+## Devlog 9: 03/03/2026
+
+- Se ha refactorizado el enum TipoAccion para que contenga la prioridad intrínseca de cada acción. Esta prioridad es un número de 2 a 5, siendo el 1 la mayor prioridad que pertenece a las cartas de inspiración. 
+- Para obtener esta prioridad se ha usado un método auxiliar `obtenerPrioridad` que usa la clase `obtenerCartasOrdenadas` para ordenar primero por cantidad de votos, y entonces por prioridad.
