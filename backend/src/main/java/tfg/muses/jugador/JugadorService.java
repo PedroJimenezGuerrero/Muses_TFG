@@ -53,7 +53,6 @@ public class JugadorService {
             jugador.setNumeroJugador(jugadorActualizado.getNumeroJugador());
             jugador.setPuntuacionTotal(jugadorActualizado.getPuntuacionTotal());
             jugador.setCartaInspiracion(jugadorActualizado.getCartaInspiracion());
-            jugador.setMano(jugadorActualizado.getMano());
             jugador.setTokens(jugadorActualizado.getTokens());
             jugador.setUsuario(jugadorActualizado.getUsuario());
             return jugadorRepository.save(jugador);

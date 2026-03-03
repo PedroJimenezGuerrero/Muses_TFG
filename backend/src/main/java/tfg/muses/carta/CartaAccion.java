@@ -15,6 +15,4 @@ public class CartaAccion extends CartaBase {
 
     @Enumerated(EnumType.STRING)
     private TipoAccion tipo;
-
-    private int prioridad;
 }
