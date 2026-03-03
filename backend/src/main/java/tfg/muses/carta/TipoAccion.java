@@ -1,8 +1,17 @@
 package tfg.muses.carta;
 
+import lombok.Getter;
+
+@Getter
 public enum TipoAccion {
-    DEVOCION_SOL,
-    DEVOCION_LUNA,
-    REVOLUCION_SOL,
-    REVOLUCION_LUNA
+    DEVOCION_SOL(2),
+    REVOLUCION_SOL(3),
+    REVOLUCION_LUNA(4),
+    DEVOCION_LUNA(5);
+
+    private final int prioridad;
+
+    TipoAccion(int prioridad) {
+        this.prioridad = prioridad;
+    }
 }
