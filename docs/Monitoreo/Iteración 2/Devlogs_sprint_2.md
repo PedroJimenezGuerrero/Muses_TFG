@@ -59,3 +59,4 @@
 
 - Se ha refactorizado el enum TipoAccion para que contenga la prioridad intrínseca de cada acción. Esta prioridad es un número de 2 a 5, siendo el 1 la mayor prioridad que pertenece a las cartas de inspiración. 
 - Para obtener esta prioridad se ha usado un método auxiliar `obtenerPrioridad` que usa la clase `obtenerCartasOrdenadas` para ordenar primero por cantidad de votos, y entonces por prioridad.
+- Se ha refactorizado la entidad `Jugador` para eliminar el atributo `mano`, que no tenía sentido en la arquitectura actual de la aplicación.

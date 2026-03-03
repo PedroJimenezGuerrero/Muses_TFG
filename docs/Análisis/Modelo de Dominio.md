@@ -28,10 +28,17 @@ classDiagram
     %%% Dominio del juego
     class TipoAccion {
         <<Enum>>
-        DEVOCIÓN_SOL
-        DEVOCIÓN_LUNA
-        REVOLUCIÓN_SOL
-        REVOLUCIÓN_LUNA
+        DEVOCIÓN_SOL (prioridad 2)
+        REVOLUCIÓN_SOL (prioridad 3)
+        REVOLUCIÓN_LUNA (prioridad 4)
+        DEVOCIÓN_LUNA (prioridad 5)
+        +int prioridad
+    }
+
+    class TipoInspiracion {
+        <<Enum>>
+        LADOS
+        VERTICES
     }
 
     class TipoMusa {
@@ -45,23 +52,27 @@ classDiagram
         POLIMNIA
         URANIA
         CALÍOPE
+        +TipoInspiracion tipoInspiracion
         +getPuntos(nivel: int)
     }
 
     %% Clases Principales
     class Partida:::core {
-        +String id
+        +Long id
         +int rondaActual
         +int maxRondas = 9
         +int duracionTotal
+        +LocalDateTime fechaInicio
+        +LocalDateTime fechaFin
+        +Map~Long, Long~ seleccionesRonda
         +iniciar()
         +siguienteRonda()
         +finalizar()
     }
 
     class Tablero:::core {
-        +Posicion solPos
-        +Posicion lunaPos
+        +int solPos
+        +int lunaPos
         +List~Musa~ grid
         +revoluciónSolar()
         +revoluciónLunar()
@@ -70,11 +81,11 @@ classDiagram
     }
 
     class Jugador:::core {
-        +String id
+        +Long id
         +String nombre
-        +int númeroJugador
+        +int numeroJugador
         +int puntuacionTotal
-        +List~Token~ reservaTokens
+        +List~Token~ tokens
         +jugarCarta(carta: Carta)
     }
 
@@ -87,26 +98,25 @@ classDiagram
     %% Elementos de Juego
     class Carta {
         <<Abstract>>
-        +String id
+        +Long id
+        +String nombre
         +String descripcion
         +ejecutarEfecto()
     }
 
     class CartaAccion:::item {
         +TipoAccion tipo
-        +Prioridad prioridad
         +ejecutarEfecto()
     }
 
     class CartaInspiracion:::item {
-        +TipoMusa musa
+        +TipoMusa nombreMusa
         +boolean usada
         +ejecutarEfecto()
     }
 
     class Token:::item {
         +boolean colocado
-        +
     }
 
     %% Relaciones
@@ -117,7 +127,6 @@ classDiagram
     Musa "1" o-- "*" Token : tiene
 
     Jugador "1" o-- "1" CartaInspiracion : posee
-    Jugador "1" o-- "4" CartaAccion : mano
     Jugador "1" *-- "20" Token : tiene
 
     Carta <|-- CartaAccion
@@ -126,13 +135,14 @@ classDiagram
     %%% Dominio de la aplicación
     
     class Usuario:::meta {
-        +String id
+        +Long id
         +String username
         +String password
-        +Date fechaRegistro
+        +String email
+        +LocalDateTime fechaRegistro
     }
     class Estadisticas:::meta {
-        +String id
+        +Long id
         +int partidasJugadas
         +int victorias
         +int derrotas

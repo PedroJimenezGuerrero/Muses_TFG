@@ -95,14 +95,14 @@ public class PartidaService {
     }
 
     /**
-     * Obtener todas las cartas de una partida
+     * Obtener todas las cartas de inspiración de una partida
      */
     public List<CartaBase> getCartasByPartida(Long partidaId) {
         List<CartaBase> cartas = new ArrayList<>();
         List<Jugador> jugadores = getJugadoresByPartida(partidaId);
         for (Jugador jugador : jugadores) {
-            if (jugador.getMano() != null) {
-                cartas.addAll(jugador.getMano());
+            if (jugador.getCartaInspiracion() != null) {
+                cartas.add(jugador.getCartaInspiracion());
             }
         }
         return cartas;

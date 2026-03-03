@@ -226,14 +226,14 @@ public class PartidaServiceTests {
     }
 
     @Test
-    public void getCartasByPartidaRetornaCartasDeTodosLosJugadores() {
-        CartaAccion carta1 = new CartaAccion();
-        carta1.setTipo(TipoAccion.DEVOCION_SOL);
-        CartaAccion carta2 = new CartaAccion();
-        carta2.setTipo(TipoAccion.REVOLUCION_SOL);
+    public void getCartasByPartidaRetornaCartasDeInspiracion() {
+        CartaInspiracion carta1 = new CartaInspiracion();
+        carta1.setNombreMusa(TipoMusa.CLIO);
+        CartaInspiracion carta2 = new CartaInspiracion();
+        carta2.setNombreMusa(TipoMusa.EUTERPE);
 
-        jugador1.setMano(List.of(carta1));
-        jugador2.setMano(List.of(carta2));
+        jugador1.setCartaInspiracion(carta1);
+        jugador2.setCartaInspiracion(carta2);
 
         when(partidaRepository.findById(1L)).thenReturn(Optional.of(partida));
 
@@ -243,11 +243,11 @@ public class PartidaServiceTests {
     }
 
     @Test
-    public void getCartasByPartidaIgnoraJugadoresConManoNull() {
-        CartaAccion carta1 = new CartaAccion();
-        carta1.setTipo(TipoAccion.DEVOCION_SOL);
-        jugador1.setMano(List.of(carta1));
-        jugador2.setMano(null);
+    public void getCartasByPartidaIgnoraJugadoresSinCartaInspiracion() {
+        CartaInspiracion carta1 = new CartaInspiracion();
+        carta1.setNombreMusa(TipoMusa.CLIO);
+        jugador1.setCartaInspiracion(carta1);
+        jugador2.setCartaInspiracion(null);
 
         when(partidaRepository.findById(1L)).thenReturn(Optional.of(partida));
 
