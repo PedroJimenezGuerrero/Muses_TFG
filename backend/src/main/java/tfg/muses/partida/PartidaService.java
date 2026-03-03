@@ -15,7 +15,9 @@ import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import tfg.muses.carta.CartaAccion;
 import tfg.muses.carta.CartaBase;
+import tfg.muses.carta.CartaInspiracion;
 import tfg.muses.carta.CartaService;
 import tfg.muses.jugador.Jugador;
 import tfg.muses.jugador.JugadorService;
@@ -171,13 +173,24 @@ public class PartidaService {
         }
 
         List<CartaBase> cartasOrdenadasPorVotos = votosPorCarta.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-                // TODO: añadir desempate por prioridad
+                .map(entry -> Map.entry(cartaService.getById(entry.getKey()), entry.getValue()))
+                .sorted(Comparator.<Map.Entry<CartaBase, Long>, Long>comparing(Map.Entry::getValue,
+                        Comparator.reverseOrder())
+                        .thenComparing(entry -> obtenerPrioridad(entry.getKey())))
                 .map(Map.Entry::getKey)
-                .map(cartaId -> cartaService.getById(cartaId))
                 .toList();
 
         return cartasOrdenadasPorVotos;
+    }
+
+    private int obtenerPrioridad(CartaBase carta) {
+        if (carta instanceof CartaInspiracion) {
+            return 1;
+        }
+        if (carta instanceof CartaAccion cartaAccion) {
+            return cartaAccion.getTipo().getPrioridad();
+        }
+        return Integer.MAX_VALUE;
     }
 
     private boolean todosJugadoresHanSeleccionadoCarta(Partida partida) {
