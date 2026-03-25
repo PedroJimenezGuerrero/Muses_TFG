@@ -28,10 +28,10 @@ classDiagram
     %%% Dominio del juego
     class TipoAccion {
         <<Enum>>
-        DEVOCIÓN_SOL (prioridad 2)
-        REVOLUCIÓN_SOL (prioridad 3)
-        REVOLUCIÓN_LUNA (prioridad 4)
-        DEVOCIÓN_LUNA (prioridad 5)
+        DEVOCIÓN_SOL
+        REVOLUCIÓN_SOL
+        REVOLUCIÓN_LUNA
+        DEVOCIÓN_LUNA
         +int prioridad
     }
 
@@ -52,6 +52,9 @@ classDiagram
         POLIMNIA
         URANIA
         CALÍOPE
+        +int nivel1
+        +int nivel2
+        +int nivel3
         +TipoInspiracion tipoInspiracion
         +getPuntos(nivel: int)
     }
@@ -65,6 +68,7 @@ classDiagram
         +LocalDateTime fechaInicio
         +LocalDateTime fechaFin
         +Map~Long, Long~ seleccionesRonda
+        +int version
         +iniciar()
         +siguienteRonda()
         +finalizar()
