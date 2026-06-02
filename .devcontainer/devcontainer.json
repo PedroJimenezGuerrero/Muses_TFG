@@ -15,12 +15,16 @@
         "vscode": {
             "extensions": [
                 "vscjava.vscode-java-pack",
+                "vscjava.vscode-gradle",
                 "vmware.vscode-spring-boot",
                 "dbaeumer.vscode-eslint",
                 "esbenp.prettier-vscode",
                 "eamodio.gitlens",
                 "vivaxy.vscode-conventional-commits",
-                "codezombiech.gitignore"
+                "codezombiech.gitignore",
+                "ms-azuretools.vscode-docker",
+                "mermaidchart.vscode-mermaid-chart",
+                "soramanew.caelestia-vscode-integration"
             ]
         }
     },
