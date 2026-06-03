@@ -1,6 +1,9 @@
 package tfg.muses.partida;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -22,7 +25,10 @@ import tfg.muses.carta.CartaService;
 import tfg.muses.jugador.Jugador;
 import tfg.muses.jugador.JugadorService;
 import tfg.muses.musa.Musa;
+import tfg.muses.musa.TipoMusa;
+import tfg.muses.puntuacion.PuntuacionService;
 import tfg.muses.tablero.Tablero;
+import tfg.muses.tablero.TableroService;
 import tfg.muses.token.Token;
 
 @Service
@@ -32,13 +38,23 @@ public class PartidaService {
     private PartidaRepository partidaRepository;
 
     @Autowired
+    @org.springframework.context.annotation.Lazy
     private CartaService cartaService;
 
     @Autowired
+    @org.springframework.context.annotation.Lazy
     private JugadorService jugadorService;
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private TableroService tableroService;
+
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private PuntuacionService puntuacionService;
 
     /**
      * Crear una nueva partida
@@ -68,7 +84,7 @@ public class PartidaService {
         partida.setFechaFin(partidaActualizada.getFechaFin());
         partida.setTablero(partidaActualizada.getTablero());
         partida.setJugadores(partidaActualizada.getJugadores());
-        partida.setGanador(partidaActualizada.getGanador());
+        partida.setGanadores(partidaActualizada.getGanadores());
         return partidaRepository.save(partida);
     }
 
@@ -164,6 +180,95 @@ public class PartidaService {
         cartasOrdenadasPorVotos
                 .forEach(cartaBase -> cartaService.ejecutarEfecto(cartaBase, partida.getTablero(), jugador));
 
+        finalizarRonda(partida);
+    }
+
+    /**
+     * F09-F12: Iniciar una partida.
+     * Inicializa el tablero con 9 musas aleatorias y astros (sol=0, luna=4),
+     * establece la ronda 1, asigna fecha de inicio y reparte a cada jugador
+     * una carta de inspiración única (usada=false) y 20 tokens de devoción.
+     */
+    @Transactional
+    public Tablero iniciarPartida(Long id) {
+        Partida partida = getById(id);
+
+        Tablero tablero = tableroService.inicializarTablero();
+        partida.setTablero(tablero);
+        partida.setRondaActual(1);
+        partida.setFechaInicio(LocalDateTime.now());
+
+        if (partida.getJugadores() != null) {
+            List<TipoMusa> musasDisponibles = new ArrayList<>(List.of(TipoMusa.values()));
+            Collections.shuffle(musasDisponibles);
+
+            int index = 0;
+            for (Jugador j : partida.getJugadores()) {
+                if (index < musasDisponibles.size()) {
+                    TipoMusa tipoMusa = musasDisponibles.get(index++);
+                    CartaInspiracion carta = new CartaInspiracion();
+                    carta.setNombre("Inspiración de " + tipoMusa.name());
+                    carta.setDescripcion("Efecto de inspiración de la musa " + tipoMusa.name());
+                    carta.setNombreMusa(tipoMusa);
+                    carta.setUsada(false);
+                    j.setCartaInspiracion(carta);
+                }
+
+                if (j.getTokens() == null || j.getTokens().isEmpty()) {
+                    List<Token> tokens = new ArrayList<>();
+                    for (int i = 0; i < 20; i++) {
+                        Token token = new Token();
+                        token.setColocado(false);
+                        token.setJugador(j);
+                        tokens.add(token);
+                    }
+                    j.setTokens(tokens);
+                }
+            }
+        }
+
+        partidaRepository.save(partida);
+        return tablero;
+    }
+
+    /**
+     * F13 & F14: Finalizar la ronda actual.
+     * Limpia selecciones de ronda e incrementa rondaActual.
+     * Si rondaActual alcanza maxRondas, invoca finalizarPartida.
+     */
+    public void finalizarRonda(Partida partida) {
+        if (partida == null) {
+            return;
+        }
+
+        partida.getSeleccionesRonda().clear();
+
+        if (partida.getRondaActual() >= partida.getMaxRondas()) {
+            finalizarPartida(partida);
+        } else {
+            partida.setRondaActual(partida.getRondaActual() + 1);
+            partidaRepository.save(partida);
+        }
+    }
+
+    /**
+     * F14 & F15-F19: Finalizar partida.
+     * Establece fechaFin, calcula duracionTotal y delega en PuntuacionService.
+     */
+    public void finalizarPartida(Partida partida) {
+        if (partida == null) {
+            return;
+        }
+
+        LocalDateTime fin = LocalDateTime.now();
+        partida.setFechaFin(fin);
+        if (partida.getFechaInicio() != null) {
+            long minutos = Duration.between(partida.getFechaInicio(), fin).toMinutes();
+            partida.setDuracionTotal((int) minutos);
+        }
+
+        puntuacionService.procesarFinPartida(partida);
+        partidaRepository.save(partida);
     }
 
     private List<CartaBase> obtenerCartasOrdenadas(Map<Long, Long> selecciones) {

@@ -10,6 +10,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import tfg.muses.baseEntity.BaseEntity;
 import tfg.muses.carta.CartaInspiracion;
 import tfg.muses.token.Token;
@@ -30,6 +31,8 @@ public class Jugador extends BaseEntity {
     private CartaInspiracion cartaInspiracion;
 
     @OneToMany(cascade = CascadeType.ALL)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private List<Token> tokens;
 
     @ManyToOne(optional = false)

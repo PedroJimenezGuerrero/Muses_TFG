@@ -6,6 +6,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapKeyColumn;
 import jakarta.persistence.OneToMany;
@@ -13,6 +15,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Version;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,8 +46,13 @@ public class Partida extends BaseEntity {
     @OneToMany(cascade = CascadeType.ALL)
     private List<Jugador> jugadores;
 
-    @ManyToOne
-    private Usuario ganador;
+    @ManyToMany
+    @JoinTable(
+        name = "partida_ganadores",
+        joinColumns = @JoinColumn(name = "partida_id"),
+        inverseJoinColumns = @JoinColumn(name = "usuario_id")
+    )
+    private List<Usuario> ganadores = new ArrayList<>();
 
     @ElementCollection
     @CollectionTable(name = "partida_selecciones_ronda", joinColumns = @JoinColumn(name = "partida_id"))

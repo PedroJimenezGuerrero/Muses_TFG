@@ -22,6 +22,7 @@ import tfg.muses.exception.ResourceNotFoundException;
 import tfg.muses.partida.Partida;
 import tfg.muses.partida.PartidaController;
 import tfg.muses.partida.PartidaService;
+import tfg.muses.tablero.Tablero;
 
 @WebMvcTest(PartidaController.class)
 @WithMockUser
@@ -239,6 +240,37 @@ public class PartidaControllerTests {
                 .with(csrf())
                 .param("jugadorId", "1")
                 .param("cartaId", "10"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Partida con id 99 no encontrado"));
+    }
+
+    // ── POST /partida/{id}/iniciar ───────────────────────────────────────────
+
+    @Test
+    public void iniciarPartidaRetornaTableroConStatusOk() throws Exception {
+        Tablero tablero = new Tablero();
+        tablero.setSolPos(0);
+        tablero.setLunaPos(4);
+
+        when(partidaService.iniciarPartida(1L)).thenReturn(tablero);
+
+        mockMvc.perform(post("/partida/1/iniciar").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.solPos").value(0))
+                .andExpect(jsonPath("$.lunaPos").value(4));
+    }
+
+    @Test
+    public void iniciarPartidaSinCsrfRetornaForbidden() throws Exception {
+        mockMvc.perform(post("/partida/1/iniciar"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    public void iniciarPartidaRetorna404CuandoPartidaNoExiste() throws Exception {
+        when(partidaService.iniciarPartida(99L)).thenThrow(new ResourceNotFoundException("Partida", 99L));
+
+        mockMvc.perform(post("/partida/99/iniciar").with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Partida con id 99 no encontrado"));
     }
