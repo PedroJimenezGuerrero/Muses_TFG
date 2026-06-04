@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import tfg.muses.tablero.Tablero;
 
 @RestController
 @RequestMapping("partida")
@@ -45,11 +44,6 @@ public class PartidaController {
     @DeleteMapping("{id}")
     public void delete(@PathVariable Long id) {
         partidaService.delete(id);
-    }
-
-    @PostMapping("{id}/iniciar")
-    public Tablero iniciarPartida(@PathVariable Long id) {
-        return partidaService.iniciarPartida(id);
     }
 
     @PostMapping("{partidaId}/seleccionar-carta")
