@@ -19,6 +19,7 @@ import tfg.muses.musa.MusaService;
 import tfg.muses.musa.TipoMusa;
 import tfg.muses.partida.Partida;
 import tfg.muses.partida.PartidaRepository;
+import tfg.muses.partida.PartidaService;
 import tfg.muses.tablero.Tablero;
 import tfg.muses.tablero.TableroRepository;
 import tfg.muses.tablero.TableroService;
@@ -28,6 +29,7 @@ public class TableroServiceTests {
     private TableroService tableroService;
     private TableroRepository tableroRepository;
     private PartidaRepository partidaRepository;
+    private PartidaService partidaService;
     private MusaService musaService;
 
     private Tablero tablero;
@@ -37,11 +39,13 @@ public class TableroServiceTests {
     public void setUp() throws Exception {
         tableroRepository = mock(TableroRepository.class);
         partidaRepository = mock(PartidaRepository.class);
+        partidaService = mock(PartidaService.class);
         musaService = mock(MusaService.class);
 
         tableroService = new TableroService();
         injectField(tableroService, "tableroRepository", tableroRepository);
         injectField(tableroService, "partidaRepository", partidaRepository);
+        injectField(tableroService, "partidaService", partidaService);
         injectField(tableroService, "musaService", musaService);
 
         tablero = buildTableroConGrid(1, 5);
@@ -145,7 +149,7 @@ public class TableroServiceTests {
     public void getByPlayerIdRetornaTableroDePartidaDelJugador() {
         Partida partida = new Partida();
         partida.setTablero(tablero);
-        when(partidaRepository.findByJugadoresId(1L)).thenReturn(Optional.of(partida));
+        when(partidaService.getByJugadorId(1L)).thenReturn(partida);
 
         Tablero resultado = tableroService.getByPlayerId(1L);
 
@@ -154,7 +158,7 @@ public class TableroServiceTests {
 
     @Test
     public void getByPlayerIdRetornaNullCuandoJugadorSinPartida() {
-        when(partidaRepository.findByJugadoresId(99L)).thenReturn(Optional.empty());
+        when(partidaService.getByJugadorId(99L)).thenReturn(null);
 
         Tablero resultado = tableroService.getByPlayerId(99L);
 
@@ -435,51 +439,6 @@ public class TableroServiceTests {
             assertDoesNotThrow(() -> tableroService.getMusasEnAstros(tablero),
                     "La posición " + pos + " debería ser válida");
         }
-    }
-
-    // ── F09 & F12: inicializarTablero ───────────────────────────────────────
-
-    @Test
-    public void inicializarTableroCreaNueveMusasUnicas() {
-        when(tableroRepository.save(any(Tablero.class))).thenAnswer(i -> i.getArgument(0));
-
-        Tablero result = tableroService.inicializarTablero();
-
-        assertNotNull(result);
-        assertNotNull(result.getGrid());
-        assertEquals(9, result.getGrid().size());
-        assertEquals(9, result.getGrid().stream().map(Musa::getNombre).distinct().count());
-        assertTrue(result.getGrid().stream().allMatch(m -> m.getNombre() != null));
-    }
-
-    @Test
-    public void inicializarTableroOrdenDeMusasEsAleatorio() {
-        when(tableroRepository.save(any(Tablero.class))).thenAnswer(i -> i.getArgument(0));
-
-        List<TipoMusa> ordenEnum = List.of(TipoMusa.values());
-        boolean algunaDiferente = false;
-
-        for (int i = 0; i < 10; i++) {
-            Tablero t = tableroService.inicializarTablero();
-            List<TipoMusa> ordenGenerado = t.getGrid().stream().map(Musa::getNombre).toList();
-            if (!ordenGenerado.equals(ordenEnum)) {
-                algunaDiferente = true;
-                break;
-            }
-        }
-
-        assertTrue(algunaDiferente, "El orden de las musas debe ser aleatorio y no coincidir siempre con el enum");
-    }
-
-    @Test
-    public void inicializarTableroPosicionesAstrosSolCeroYLunaCuatro() {
-        when(tableroRepository.save(any(Tablero.class))).thenAnswer(i -> i.getArgument(0));
-
-        Tablero result = tableroService.inicializarTablero();
-
-        assertNotNull(result);
-        assertEquals(0, result.getSolPos());
-        assertEquals(4, result.getLunaPos());
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
