@@ -1,2 +1,28 @@
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'Muses_TFG'
 include 'backend'
+
+gradle.beforeProject { project ->
+    project.tasks.withType(Test).configureEach {
+        def envFile = new File(rootDir, '.env')
+        if (envFile.exists()) {
+            envFile.eachLine { line ->
+                line = line.trim()
+                if (line && !line.startsWith('#') && line.contains('=')) {
+                    def parts = line.split('=', 2)
+                    def key = parts[0].trim()
+                    def val = parts[1].trim()
+                    if (key == 'DB_HOST' && val == 'db' && System.getenv('DB_HOST') == null) {
+                        val = '172.18.0.2'
+                    }
+                    if (System.getenv(key) == null) {
+                        environment key, val
+                    }
+                }
+            }
+        }
+    }
+}
