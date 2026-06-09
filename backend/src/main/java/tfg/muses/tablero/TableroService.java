@@ -1,6 +1,8 @@
 package tfg.muses.tablero;
 
 import java.security.InvalidParameterException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +15,6 @@ import tfg.muses.musa.Musa;
 import tfg.muses.musa.TipoMusa;
 import tfg.muses.partida.Partida;
 import tfg.muses.partida.PartidaRepository;
-import tfg.muses.partida.PartidaService;
 import tfg.muses.musa.MusaService;
 
 @Service
@@ -24,9 +25,6 @@ public class TableroService {
 
     @Autowired
     private PartidaRepository partidaRepository;
-
-    @Autowired
-    private PartidaService partidaService;
 
     @Autowired
     private MusaService musaService;
@@ -79,9 +77,9 @@ public class TableroService {
      * Eliminar el tablero de una partida
      */
     public void deleteAllByPartida(Long partidaId) {
-        Tablero tablero = partidaService.getTableroByPartida(partidaId);
-        if (tablero != null) {
-            tableroRepository.delete(tablero);
+        Partida partida = partidaRepository.findById(partidaId).orElse(null);
+        if (partida != null && partida.getTablero() != null) {
+            tableroRepository.delete(partida.getTablero());
         }
     }
 
@@ -89,7 +87,7 @@ public class TableroService {
      * Obtener el tablero en el que juega un jugador
      */
     public Tablero getByPlayerId(Long playerId) {
-        Partida partida = partidaService.getByJugadorId(playerId);
+        Partida partida = partidaRepository.findByJugadoresId(playerId).orElse(null);
         if (partida != null) {
             return partida.getTablero();
         }
@@ -337,4 +335,27 @@ public class TableroService {
         return grid;
     }
 
+    /**
+     * F09 & F12: Inicializar el tablero generando 9 musas aleatorias (TipoMusa)
+     * y configurando las posiciones iniciales de los astros (sol=0, luna=4).
+     */
+    public Tablero inicializarTablero() {
+        Tablero tablero = new Tablero();
+        tablero.setSolPos(0);
+        tablero.setLunaPos(4);
+
+        List<TipoMusa> tipos = new ArrayList<>(List.of(TipoMusa.values()));
+        Collections.shuffle(tipos);
+
+        List<Musa> grid = new ArrayList<>();
+        for (TipoMusa tipo : tipos) {
+            Musa musa = new Musa();
+            musa.setNombre(tipo);
+            musa.setTokensColocados(new ArrayList<>());
+            grid.add(musa);
+        }
+        tablero.setGrid(grid);
+
+        return tableroRepository.save(tablero);
+    }
 }
