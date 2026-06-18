@@ -6,6 +6,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import tfg.muses.baseEntity.BaseEntity;
 import tfg.muses.jugador.Jugador;
 
@@ -18,5 +19,7 @@ public class Token extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "jugador_id")
     @JsonIgnoreProperties({"tokens", "cartaInspiracion"})
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Jugador jugador;
 }
