@@ -13,7 +13,7 @@ graph TD
     classDef default fill:#fff,stroke:#000,stroke-width:1px;
     
     %% Nivel 0 (Proyecto)
-    P["1\. Muses"]:::root
+    P["1. Muses"]:::root
 
     %% Nivel 1 (Cuentas de Control)
     P --> I["1.1 Inicio"]

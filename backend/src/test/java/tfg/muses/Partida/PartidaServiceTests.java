@@ -30,7 +30,9 @@ import tfg.muses.musa.TipoMusa;
 import tfg.muses.partida.Partida;
 import tfg.muses.partida.PartidaRepository;
 import tfg.muses.partida.PartidaService;
+import tfg.muses.puntuacion.PuntuacionService;
 import tfg.muses.tablero.Tablero;
+import tfg.muses.tablero.TableroService;
 import tfg.muses.token.Token;
 import tfg.muses.usuario.Usuario;
 
@@ -41,6 +43,8 @@ public class PartidaServiceTests {
     private CartaService cartaService;
     private JugadorService jugadorService;
     private SimpMessagingTemplate messagingTemplate;
+    private TableroService tableroService;
+    private PuntuacionService puntuacionService;
 
     private Partida partida;
     private Tablero tablero;
@@ -54,12 +58,16 @@ public class PartidaServiceTests {
         cartaService = mock(CartaService.class);
         jugadorService = mock(JugadorService.class);
         messagingTemplate = mock(SimpMessagingTemplate.class);
+        tableroService = mock(TableroService.class);
+        puntuacionService = mock(PuntuacionService.class);
 
         partidaService = new PartidaService();
         injectField(partidaService, "partidaRepository", partidaRepository);
         injectField(partidaService, "cartaService", cartaService);
         injectField(partidaService, "jugadorService", jugadorService);
         injectField(partidaService, "messagingTemplate", messagingTemplate);
+        injectField(partidaService, "tableroService", tableroService);
+        injectField(partidaService, "puntuacionService", puntuacionService);
 
         usuario = new Usuario();
         usuario.setUsername("testUser");
@@ -520,6 +528,93 @@ public class PartidaServiceTests {
         boolean resultado = invokeTodosJugadoresHanSeleccionadoCarta(partida);
 
         assertFalse(resultado);
+    }
+
+    // ── F10, F11, F13, F14: iniciarPartida & Ciclo de rondas ────────────────
+
+    @Test
+    public void iniciarPartidaInicializaTableroYRondaYCartasInspiracion() {
+        when(partidaRepository.findById(1L)).thenReturn(Optional.of(partida));
+        when(tableroService.inicializarTablero()).thenReturn(tablero);
+        when(partidaRepository.save(any(Partida.class))).thenAnswer(i -> i.getArgument(0));
+
+        Tablero result = partidaService.iniciarPartida(1L);
+
+        assertNotNull(result);
+        assertEquals(tablero, result);
+        assertEquals(1, partida.getRondaActual());
+        assertNotNull(partida.getFechaInicio());
+
+        // Verificar cartas de inspiración únicas y no usadas
+        CartaInspiracion c1 = jugador1.getCartaInspiracion();
+        CartaInspiracion c2 = jugador2.getCartaInspiracion();
+        assertNotNull(c1);
+        assertNotNull(c2);
+        assertNotEquals(c1.getNombreMusa(), c2.getNombreMusa());
+        assertFalse(c1.isUsada());
+        assertFalse(c2.isUsada());
+
+        // Verificar inicialización de 20 tokens de devoción por jugador
+        assertEquals(20, jugador1.getTokens().size());
+        assertEquals(20, jugador2.getTokens().size());
+        assertTrue(jugador1.getTokens().stream().noneMatch(Token::isColocado));
+        assertTrue(jugador1.getTokens().stream().allMatch(t -> t.getJugador() == jugador1));
+
+        verify(tableroService).inicializarTablero();
+        verify(partidaRepository).save(partida);
+    }
+
+    @Test
+    public void iniciarPartidaLanzaExcepcionSiPartidaNoExiste() {
+        when(partidaRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> partidaService.iniciarPartida(99L));
+    }
+
+    @Test
+    public void finalizarRondaIncrementaRondaActualYLimpiaSelecciones() {
+        partida.setRondaActual(3);
+        partida.setMaxRondas(9);
+        partida.getSeleccionesRonda().put(1L, 10L);
+
+        when(partidaRepository.save(any(Partida.class))).thenAnswer(i -> i.getArgument(0));
+
+        partidaService.finalizarRonda(partida);
+
+        assertEquals(4, partida.getRondaActual());
+        assertTrue(partida.getSeleccionesRonda().isEmpty());
+        assertNull(partida.getFechaFin());
+        verify(partidaRepository).save(partida);
+        verifyNoInteractions(puntuacionService);
+    }
+
+    @Test
+    public void finalizarRondaEnRondaNueveDisparaFinalizacionDePartida() {
+        partida.setRondaActual(9);
+        partida.setMaxRondas(9);
+        partida.getSeleccionesRonda().put(1L, 10L);
+
+        when(partidaRepository.save(any(Partida.class))).thenAnswer(i -> i.getArgument(0));
+
+        partidaService.finalizarRonda(partida);
+
+        assertTrue(partida.getSeleccionesRonda().isEmpty());
+        assertNotNull(partida.getFechaFin());
+        verify(puntuacionService).procesarFinPartida(partida);
+        verify(partidaRepository).save(partida);
+    }
+
+    @Test
+    public void finalizarPartidaCalculaDuracionYInvocaPuntuacionService() {
+        partida.setFechaInicio(LocalDateTime.now().minusMinutes(35));
+        when(partidaRepository.save(any(Partida.class))).thenAnswer(i -> i.getArgument(0));
+
+        partidaService.finalizarPartida(partida);
+
+        assertNotNull(partida.getFechaFin());
+        assertTrue(partida.getDuracionTotal() >= 34);
+        verify(puntuacionService).procesarFinPartida(partida);
+        verify(partidaRepository).save(partida);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
