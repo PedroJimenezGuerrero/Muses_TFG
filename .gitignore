@@ -30,3 +30,5 @@ replay_pid*
 # local settings
 .vscode/*
 .env
+
+.agents
