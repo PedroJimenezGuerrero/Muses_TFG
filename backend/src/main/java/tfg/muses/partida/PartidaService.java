@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -228,6 +229,7 @@ public class PartidaService {
         }
 
         partidaRepository.save(partida);
+        messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/estado", partida);
         return tablero;
     }
 
@@ -247,7 +249,11 @@ public class PartidaService {
             finalizarPartida(partida);
         } else {
             partida.setRondaActual(partida.getRondaActual() + 1);
+            if (partida.getTablero() != null) {
+                tableroService.rotarAstros(partida.getTablero());
+            }
             partidaRepository.save(partida);
+            messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/estado", partida);
         }
     }
 
@@ -269,6 +275,35 @@ public class PartidaService {
 
         puntuacionService.procesarFinPartida(partida);
         partidaRepository.save(partida);
+        messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/fin", partida);
+    }
+
+    /**
+     * Obtener el desglose de puntos por musa y jugador para el modal de fin de partida.
+     */
+    public Map<String, Map<String, Map<String, Integer>>> obtenerDesglosePuntos(Long partidaId) {
+        Partida partida = getById(partidaId);
+        Map<String, Map<String, Map<String, Integer>>> desglose = new LinkedHashMap<>();
+
+        if (partida.getTablero() != null && partida.getTablero().getGrid() != null) {
+            List<Jugador> jugadores = partida.getJugadores() != null ? partida.getJugadores() : Collections.emptyList();
+            for (Musa musa : partida.getTablero().getGrid()) {
+                Map<Jugador, Integer> recuento = puntuacionService.contarTokensPorJugador(musa, jugadores);
+                Map<Jugador, Integer> puntos = puntuacionService.calcularPuntosMusa(musa, jugadores);
+
+                Map<String, Map<String, Integer>> musaDesglose = new LinkedHashMap<>();
+                for (Jugador j : jugadores) {
+                    String nombreJugador = j.getNombre() != null ? j.getNombre()
+                            : (j.getUsuario() != null ? j.getUsuario().getUsername() : "Jugador " + j.getId());
+                    Map<String, Integer> item = new HashMap<>();
+                    item.put("tokens", recuento.getOrDefault(j, 0));
+                    item.put("points", puntos.getOrDefault(j, 0));
+                    musaDesglose.put(nombreJugador, item);
+                }
+                desglose.put(musa.getNombre().name(), musaDesglose);
+            }
+        }
+        return desglose;
     }
 
     private List<CartaBase> obtenerCartasOrdenadas(Map<Long, Long> selecciones) {

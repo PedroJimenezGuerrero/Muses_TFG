@@ -21,6 +21,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/status").permitAll()
                         .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/partida/**").permitAll()
+                        .requestMatchers("/api/v1/partida/**").permitAll()
                         .requestMatchers("/ronda/**").permitAll()
                         .anyRequest().authenticated());
 
