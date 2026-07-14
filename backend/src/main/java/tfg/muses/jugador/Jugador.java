@@ -35,6 +35,17 @@ public class Jugador extends BaseEntity {
     @ToString.Exclude
     private List<Token> tokens;
 
-    @ManyToOne(optional = false)
+    @ManyToOne
     private Usuario usuario;
+
+    private boolean conectado = true;
+    private boolean esBot = false;
+
+    public boolean isBot() {
+        return esBot;
+    }
+
+    public void setBot(boolean bot) {
+        this.esBot = bot;
+    }
 }
