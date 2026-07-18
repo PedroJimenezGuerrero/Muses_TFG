@@ -96,19 +96,42 @@ public class BotServiceImpl implements BotService {
     @Override
     public void ejecutarTurnoBot(Partida partida, Jugador bot) {
         if (partida == null || bot == null) {
+            log.warn("ejecutarTurnoBot abortado: argumentos nulos (partida={}, bot={})", partida, bot);
             return;
         }
         if (partida.getId() == null || bot.getId() == null) {
+            log.error("ejecutarTurnoBot abortado: entidades sin identificador persistido (partidaId={}, botId={})",
+                    partida.getId(), bot.getId());
             return;
         }
+
         // Idempotencia: no volver a votar si ya seleccionó en la ronda
         if (partida.getSeleccionesRonda() != null && partida.getSeleccionesRonda().containsKey(bot.getId())) {
+            log.debug("ejecutarTurnoBot omitido (idempotente): el bot con id={} ya seleccionó carta en la ronda {} de la partida con id={}",
+                    bot.getId(), partida.getRondaActual(), partida.getId());
             return;
         }
 
         CartaBase mejorCarta = calcularMejorJugada(partida, bot);
-        if (mejorCarta != null && mejorCarta.getId() != null) {
+        if (mejorCarta == null) {
+            log.error("Fallo crítico en ejecutarTurnoBot: no se pudo calcular ninguna jugada válida (mejorCarta es null) para el bot con id={} en la partida con id={}, ronda={}. El turno del bot queda desatendido y la partida puede bloquearse.",
+                    bot.getId(), partida.getId(), partida.getRondaActual());
+            return;
+        }
+
+        if (mejorCarta.getId() == null) {
+            log.error("Fallo crítico en ejecutarTurnoBot: la carta seleccionada [nombre='{}', clase={}] para el bot con id={} en la partida con id={}, ronda={} carece de identificador persistido (id es null). Imposible despachar a PartidaService.",
+                    mejorCarta.getNombre(), mejorCarta.getClass().getSimpleName(), bot.getId(), partida.getId(), partida.getRondaActual());
+            return;
+        }
+
+        try {
             partidaService.seleccionarCarta(partida.getId(), bot.getId(), mejorCarta.getId());
+            log.info("Turno del bot ejecutado con éxito: bot con id={} seleccionó carta [id={}, nombre='{}'] en partida con id={}, ronda={}",
+                    bot.getId(), mejorCarta.getId(), mejorCarta.getNombre(), partida.getId(), partida.getRondaActual());
+        } catch (Exception e) {
+            log.error("Excepción inesperada al despachar selección de carta [id={}] para el bot con id={} en la partida con id={}, ronda={}: {}",
+                    mejorCarta.getId(), bot.getId(), partida.getId(), partida.getRondaActual(), e.getMessage(), e);
         }
     }
 
@@ -272,19 +295,17 @@ public class BotServiceImpl implements BotService {
             }
         }
 
-        for (TipoAccion tipo : TipoAccion.values()) {
-            if (accionesPorTipo.containsKey(tipo)) {
-                candidatas.add(accionesPorTipo.get(tipo));
-            } else {
+        // Si existen cartas disponibles en el sistema, usar exclusivamente las reales
+        if (!accionesPorTipo.isEmpty()) {
+            candidatas.addAll(accionesPorTipo.values());
+        } else {
+            // Fallback sintético puramente en memoria SOLO si la BD está completamente vacía
+            // Cumplimiento estricto CQS: NUNCA se persiste en repositorio dentro de un método de consulta
+            for (TipoAccion tipo : TipoAccion.values()) {
                 CartaAccion ca = new CartaAccion();
                 ca.setTipo(tipo);
                 ca.setNombre(tipo.name());
                 ca.setDescripcion("Carta de acción: " + tipo.name());
-                if (cartaRepository != null) {
-                    try {
-                        ca = cartaRepository.save(ca);
-                    } catch (Exception ignored) {}
-                }
                 candidatas.add(ca);
             }
         }
