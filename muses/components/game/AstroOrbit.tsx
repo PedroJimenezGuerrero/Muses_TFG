@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import { AstroSvg } from '@/components/svg/AstroSvg';
 
 export interface AstroOrbitProps {
@@ -9,7 +10,7 @@ export interface AstroOrbitProps {
   className?: string;
 }
 
-export const AstroOrbit: React.FC<AstroOrbitProps> = ({
+export const AstroOrbit = observer<AstroOrbitProps>(({
   solPos,
   lunaPos,
   onPositionSelect,
@@ -133,6 +134,6 @@ export const AstroOrbit: React.FC<AstroOrbitProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default AstroOrbit;

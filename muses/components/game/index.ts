@@ -6,3 +6,4 @@ export * from './InspirationCard';
 export * from './Board';
 export * from './StatusPanel';
 export * from './PlayerHand';
+export * from './GameOverModal';

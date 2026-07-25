@@ -1,4 +1,5 @@
 import React from 'react';
+import { observer } from 'mobx-react-lite';
 import { Partida, Jugador } from '@/types/game';
 
 export interface StatusPanelProps {
@@ -16,7 +17,7 @@ const PLAYER_COLORS: Record<number, { name: string; bg: string; text: string; bo
   5: { name: 'purple', bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/40' },
 };
 
-export const StatusPanel: React.FC<StatusPanelProps> = ({
+export const StatusPanel = observer<StatusPanelProps>(({
   partida,
   isConnected = true,
   waitingForPlayers = false,
@@ -164,6 +165,6 @@ export const StatusPanel: React.FC<StatusPanelProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default StatusPanel;

@@ -1,4 +1,5 @@
 import React from 'react';
+import { observer } from 'mobx-react-lite';
 import { AnyCard, CartaAccion, CartaInspiracion } from '@/types/game';
 import { ActionCard } from './ActionCard';
 import { InspirationCard } from './InspirationCard';
@@ -15,7 +16,7 @@ export interface PlayerHandProps {
   className?: string;
 }
 
-export const PlayerHand: React.FC<PlayerHandProps> = ({
+export const PlayerHand = observer<PlayerHandProps>(({
   cards,
   hand,
   solPos,
@@ -120,6 +121,6 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default PlayerHand;
