@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import { Musa, MUSAS_METADATA, TipoMusa } from '@/types/game';
 import { MusaSvg } from '@/components/svg/MusaSvg';
 import { DevotionToken } from './DevotionToken';
@@ -14,7 +15,7 @@ export interface MusaCardProps {
   onClick?: () => void;
 }
 
-export const MusaCard: React.FC<MusaCardProps> = ({
+export const MusaCard = observer<MusaCardProps>(({
   musa,
   index,
   isHighlighted,
@@ -130,6 +131,6 @@ export const MusaCard: React.FC<MusaCardProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default MusaCard;

@@ -1,4 +1,6 @@
 import React from 'react';
+import { observer } from 'mobx-react-lite';
+import { motion } from 'motion/react';
 import { DevotionTokenSvg } from '@/components/svg/DevotionTokenSvg';
 
 export interface DevotionTokenProps {
@@ -18,7 +20,7 @@ const PLAYER_THEMES: Record<number, { ring: string; glow: string }> = {
   5: { ring: 'ring-purple-400', glow: 'shadow-purple-500/50' },
 };
 
-export const DevotionToken: React.FC<DevotionTokenProps> = ({
+export const DevotionToken = observer<DevotionTokenProps>(({
   id,
   playerId = 1,
   playerNumber,
@@ -30,16 +32,21 @@ export const DevotionToken: React.FC<DevotionTokenProps> = ({
   const theme = PLAYER_THEMES[pNum] || PLAYER_THEMES[1];
 
   return (
-    <div
+    <motion.div
       data-testid={id !== undefined ? `devotion-token-${id}` : `devotion-token-${pNum}`}
       data-player-id={String(playerId ?? pNum)}
       data-motion="token"
-      className={`relative inline-flex items-center justify-center rounded-full transition-transform duration-200 hover:scale-110 shadow-md ${theme.glow} ${className}`}
+      layout
+      initial={{ scale: 0.2, opacity: 0, y: -6 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      exit={{ scale: 0.2, opacity: 0 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 24 }}
+      className={`relative inline-flex items-center justify-center rounded-full hover:scale-110 shadow-md ${theme.glow} ${className}`}
       style={{ width: typeof size === 'number' ? `${size}px` : size, height: typeof size === 'number' ? `${size}px` : size }}
     >
       <DevotionTokenSvg playerNumber={pNum} size={size} count={count} />
-    </div>
+    </motion.div>
   );
-};
+});
 
 export default DevotionToken;

@@ -1,4 +1,5 @@
 import React from 'react';
+import { observer } from 'mobx-react-lite';
 import { Tablero, AnyCard, CartaAccion, CartaInspiracion } from '@/types/game';
 import { mapAstroToGrid, REVOLUTION_CYCLES, getInspirationTargetCells } from '@/lib/gameRules';
 import { AstroOrbit } from './AstroOrbit';
@@ -13,7 +14,7 @@ export interface BoardProps {
   className?: string;
 }
 
-export const Board: React.FC<BoardProps> = ({
+export const Board = observer<BoardProps>(({
   tablero,
   hoveredCard,
   selectedCard,
@@ -117,6 +118,6 @@ export const Board: React.FC<BoardProps> = ({
       </AstroOrbit>
     </div>
   );
-};
+});
 
 export default Board;

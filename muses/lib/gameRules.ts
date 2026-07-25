@@ -85,7 +85,7 @@ export const REVOLUTION_STATIONARY: Record<number, number[]> = {
   4: [1, 2, 5],
   5: [2, 5, 8],
   6: [5, 7, 8],
-  7: [0, 1, 2],
+  7: [6, 7, 8],
 };
 
 /**

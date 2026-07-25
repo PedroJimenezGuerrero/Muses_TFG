@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import { CartaAccion, AnyCard, TipoAccion, ACCIONES_METADATA } from '@/types/game';
 import { ActionCardSvg } from '@/components/svg/ActionCardSvg';
 
@@ -12,7 +13,7 @@ export interface ActionCardProps {
   className?: string;
 }
 
-export const ActionCard: React.FC<ActionCardProps> = ({
+export const ActionCard = observer<ActionCardProps>(({
   card,
   isSelected = false,
   isDisabled = false,
@@ -99,6 +100,6 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       </div>
     </button>
   );
-};
+});
 
 export default ActionCard;

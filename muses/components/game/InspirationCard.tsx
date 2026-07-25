@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import { CartaInspiracion, AnyCard, MUSAS_METADATA, TipoMusa } from '@/types/game';
 import { canPlayInspirationCard, getInspirationTargetCells } from '@/lib/gameRules';
 import { InspirationCardSvg } from '@/components/svg/InspirationCardSvg';
@@ -14,7 +15,7 @@ export interface InspirationCardProps {
   className?: string;
 }
 
-export const InspirationCard: React.FC<InspirationCardProps> = ({
+export const InspirationCard = observer<InspirationCardProps>(({
   card,
   solPos,
   isSelected = false,
@@ -141,6 +142,6 @@ export const InspirationCard: React.FC<InspirationCardProps> = ({
       </div>
     </button>
   );
-};
+});
 
 export default InspirationCard;
