@@ -40,12 +40,12 @@ public class InspiracionEffectStrategy implements CartaEffectStrategy {
         for (InspiracionMusaStrategy strategy : strategies) {
             if (strategy.supports(cartaInspiracion)) {
                 strategy.execute(cartaInspiracion, tablero, jugador);
+                cartaInspiracion.setUsada(true);
                 return;
             }
         }
 
-        // Marcar como usada
-        cartaInspiracion.setUsada(true);
+        throw new IllegalArgumentException("No se encontró una estrategia de inspiración para la musa: " + cartaInspiracion.getNombreMusa());
     }
 
     /**

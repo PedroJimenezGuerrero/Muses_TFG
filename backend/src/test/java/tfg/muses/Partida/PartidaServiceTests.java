@@ -562,6 +562,7 @@ public class PartidaServiceTests {
 
         verify(tableroService).inicializarTablero();
         verify(partidaRepository).save(partida);
+        verify(messagingTemplate).convertAndSend("/topic/partida/1/estado", partida);
     }
 
     @Test
@@ -584,6 +585,8 @@ public class PartidaServiceTests {
         assertEquals(4, partida.getRondaActual());
         assertTrue(partida.getSeleccionesRonda().isEmpty());
         assertNull(partida.getFechaFin());
+        verify(tableroService).rotarAstros(tablero);
+        verify(messagingTemplate).convertAndSend("/topic/partida/1/estado", partida);
         verify(partidaRepository).save(partida);
         verifyNoInteractions(puntuacionService);
     }
@@ -601,6 +604,7 @@ public class PartidaServiceTests {
         assertTrue(partida.getSeleccionesRonda().isEmpty());
         assertNotNull(partida.getFechaFin());
         verify(puntuacionService).procesarFinPartida(partida);
+        verify(messagingTemplate).convertAndSend("/topic/partida/1/fin", partida);
         verify(partidaRepository).save(partida);
     }
 
@@ -614,7 +618,28 @@ public class PartidaServiceTests {
         assertNotNull(partida.getFechaFin());
         assertTrue(partida.getDuracionTotal() >= 34);
         verify(puntuacionService).procesarFinPartida(partida);
+        verify(messagingTemplate).convertAndSend("/topic/partida/1/fin", partida);
         verify(partidaRepository).save(partida);
+    }
+
+    @Test
+    public void obtenerDesglosePuntosCalculaPuntosYTokensPorMusa() {
+        when(partidaRepository.findById(1L)).thenReturn(Optional.of(partida));
+        Musa clio = tablero.getGrid().get(0);
+        when(puntuacionService.contarTokensPorJugador(eq(clio), anyList()))
+                .thenReturn(Map.of(jugador1, 3, jugador2, 1));
+        when(puntuacionService.calcularPuntosMusa(eq(clio), anyList()))
+                .thenReturn(Map.of(jugador1, 7, jugador2, 5));
+
+        var desglose = partidaService.obtenerDesglosePuntos(1L);
+
+        assertNotNull(desglose);
+        assertTrue(desglose.containsKey(clio.getNombre().name()));
+        var clioDesglose = desglose.get(clio.getNombre().name());
+        assertEquals(3, clioDesglose.get("Jugador1").get("tokens"));
+        assertEquals(7, clioDesglose.get("Jugador1").get("points"));
+        assertEquals(1, clioDesglose.get("Jugador2").get("tokens"));
+        assertEquals(5, clioDesglose.get("Jugador2").get("points"));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
