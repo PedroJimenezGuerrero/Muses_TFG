@@ -1,6 +1,7 @@
 package tfg.muses.partida;
 
 import java.util.List;
+import java.util.Map;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -56,5 +57,10 @@ public class PartidaController {
     public void seleccionarCarta(@PathVariable Long partidaId, @RequestParam Long jugadorId,
             @RequestParam Long cartaId) {
         partidaService.seleccionarCarta(partidaId, jugadorId, cartaId);
+    }
+
+    @GetMapping("{id}/desglose")
+    public Map<String, Map<String, Map<String, Integer>>> getDesglose(@PathVariable Long id) {
+        return partidaService.obtenerDesglosePuntos(id);
     }
 }

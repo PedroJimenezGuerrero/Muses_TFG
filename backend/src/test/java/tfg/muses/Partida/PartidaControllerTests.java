@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -273,6 +274,21 @@ public class PartidaControllerTests {
         mockMvc.perform(post("/partida/99/iniciar").with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Partida con id 99 no encontrado"));
+    }
+
+    // ── GET /partida/{id}/desglose ───────────────────────────────────────────
+
+    @Test
+    public void getDesgloseRetornaBreakdownConStatusOk() throws Exception {
+        Map<String, Map<String, Map<String, Integer>>> breakdown = Map.of(
+                "CLIO", Map.of("Apolo", Map.of("tokens", 3, "points", 7)));
+
+        when(partidaService.obtenerDesglosePuntos(1L)).thenReturn(breakdown);
+
+        mockMvc.perform(get("/partida/1/desglose"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.CLIO.Apolo.tokens").value(3))
+                .andExpect(jsonPath("$.CLIO.Apolo.points").value(7));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
