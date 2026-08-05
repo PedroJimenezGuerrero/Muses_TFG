@@ -110,13 +110,77 @@ export class GameStore {
   isSubmitting: boolean = false;
   isConnected: boolean = true;
   notification: string | null = null;
-  isGameOver: boolean = false;
+  sala: import('@/types/game').Sala | null = null;
+  jugadorActualId: number = 1;
+  enPartida: boolean = false;
 
   constructor() {
     makeAutoObservable(this);
   }
 
   // ─── Actions ────────────────────────────────────────────────────────────────
+
+  iniciarPartidaContraBots() {
+    this.initGame();
+    this.enPartida = true;
+  }
+
+  crearSala(maxJugadores: number = 3) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let randCode = 'MUS-';
+    for (let i = 0; i < 4; i++) {
+      randCode += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    const host: import('@/types/game').Jugador = {
+      id: 1,
+      nombre: 'Apolo (Tú)',
+      numeroJugador: 1,
+      puntuacionTotal: 0,
+    };
+
+    this.sala = {
+      id: Date.now(),
+      codigo: randCode,
+      estado: 'ESPERANDO',
+      maxJugadores,
+      anfitrion: host,
+      jugadores: [host],
+    };
+  }
+
+  unirseASala(codigo: string) {
+    const nuevoJugador: import('@/types/game').Jugador = {
+      id: 2,
+      nombre: 'Jugador Invitado (Tú)',
+      numeroJugador: 2,
+      puntuacionTotal: 0,
+    };
+
+    this.sala = {
+      id: Date.now(),
+      codigo: codigo.toUpperCase(),
+      estado: 'ESPERANDO',
+      maxJugadores: 3,
+      jugadores: [
+        { id: 1, nombre: 'Anfitrión', numeroJugador: 1, puntuacionTotal: 0 },
+        nuevoJugador,
+      ],
+    };
+  }
+
+  iniciarPartidaDesdeSala() {
+    if (this.sala) {
+      this.sala.estado = 'EN_CURSO';
+    }
+    this.initGame();
+    this.enPartida = true;
+  }
+
+  abandonarSala() {
+    this.sala = null;
+    this.enPartida = false;
+  }
 
   initGame() {
     const state = buildInitialState();
