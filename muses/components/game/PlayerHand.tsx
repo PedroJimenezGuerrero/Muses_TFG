@@ -3,6 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { AnyCard, CartaAccion, CartaInspiracion } from '@/types/game';
 import { ActionCard } from './ActionCard';
 import { InspirationCard } from './InspirationCard';
+import { Play } from 'lucide-react';
 
 export interface PlayerHandProps {
   cards?: (CartaAccion | CartaInspiracion | AnyCard)[];
@@ -58,10 +59,28 @@ export const PlayerHand = observer<PlayerHandProps>(({
       role="region"
       aria-label="Mano del Jugador"
       data-testid="player-hand"
-      className={`w-full max-w-5xl mx-auto p-4 sm:p-5 rounded-3xl bg-slate-950/90 border border-amber-900/40 backdrop-blur-md shadow-2xl flex flex-col items-center gap-4 select-none ${className}`}
+      className={`fixed bottom-0 left-0 right-0 z-40 flex flex-col items-center select-none pointer-events-none ${className}`}
     >
-      {/* Hand Cards Horizontal Deck */}
-      <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 w-full">
+      {/* Action Confirmation Bar */}
+      <div className="mb-2 pointer-events-auto">
+        <button
+          type="button"
+          aria-label="Confirmar selección"
+          onClick={handleConfirm}
+          disabled={!selectedCard || isSubmitting}
+          className={`px-6 py-2.5 rounded-full font-bold text-xs sm:text-sm tracking-wider uppercase transition-all shadow-[0_0_25px_rgba(251,191,36,0.6)] flex items-center gap-2 border ${
+            selectedCard && !isSubmitting
+              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-zinc-950 hover:brightness-110 active:scale-95 border-amber-300 cursor-pointer animate-in fade-in slide-in-from-bottom-2'
+              : 'bg-zinc-900/80 text-zinc-500 border-zinc-800 opacity-40 cursor-not-allowed'
+          }`}
+        >
+          <Play className="w-4 h-4 fill-current" />
+          {isSubmitting ? 'Confirmando...' : 'Confirmar Selección'}
+        </button>
+      </div>
+
+      {/* Hand Deck - anchored to bottom half */}
+      <div className="w-full max-w-4xl mx-auto px-4 pt-4 pb-2 bg-gradient-to-t from-black/95 via-black/80 to-transparent flex justify-center items-end gap-1.5 sm:gap-3 translate-y-12 sm:translate-y-16 hover:translate-y-0 transition-transform duration-300 ease-out pointer-events-auto">
         {cardList.map((card, idx) => {
           const isInsp = isInspirationCard(card as AnyCard);
           const selected = isCardSelected(card as AnyCard);
@@ -93,31 +112,6 @@ export const PlayerHand = observer<PlayerHandProps>(({
             />
           );
         })}
-      </div>
-
-      {/* Confirmation Area */}
-      <div className="flex items-center justify-center w-full pt-2">
-        <button
-          type="button"
-          role="button"
-          aria-label="Confirmar Selección"
-          disabled={!selectedCard || isSubmitting}
-          onClick={handleConfirm}
-          className={`flex items-center justify-center gap-2 px-8 py-3 rounded-2xl font-serif font-bold text-sm sm:text-base tracking-wider transition-all duration-300 shadow-xl ${
-            !selectedCard || isSubmitting
-              ? 'bg-zinc-800 text-zinc-500 border border-zinc-700/50 cursor-not-allowed opacity-50'
-              : 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-amber-950 border border-amber-300 hover:brightness-110 hover:shadow-[0_0_20px_rgba(245,158,11,0.6)] cursor-pointer active:scale-95'
-          }`}
-        >
-          {isSubmitting ? (
-            <>
-              <span className="w-4 h-4 border-2 border-amber-950 border-t-transparent rounded-full animate-spin" />
-              <span>Confirmando...</span>
-            </>
-          ) : (
-            <span>Confirmar Selección</span>
-          )}
-        </button>
       </div>
     </div>
   );
