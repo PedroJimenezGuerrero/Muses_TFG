@@ -42,126 +42,132 @@ export const StatusPanel = observer<StatusPanelProps>(({
       role="region"
       aria-label="Estado de Partida"
       data-testid="status-panel"
-      className={`w-full max-w-5xl mx-auto p-4 sm:p-5 rounded-3xl bg-slate-950/80 border border-amber-900/40 backdrop-blur-md shadow-2xl text-amber-50 flex flex-col gap-4 select-none ${className}`}
+      className={`w-full flex flex-col gap-3 select-none ${className}`}
     >
-      {/* Top Bar: Connection, Round text, Final Round Alert */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Round Counter & Indicator */}
-        <div className="flex items-center gap-3">
-          <span className="font-serif text-lg sm:text-xl font-bold tracking-wide text-amber-300 drop-shadow-sm">
+      {/* Top Header Card: Round & Connection */}
+      <div className="p-3.5 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 backdrop-blur-md shadow-lg flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <span className="font-serif text-base font-bold tracking-wide text-amber-300 drop-shadow-sm">
             Ronda {partida.rondaActual} de {maxRondas}
           </span>
-          {isFinalRound && (
-            <span className="px-3 py-1 rounded-full bg-red-600/90 text-white font-bold text-xs uppercase tracking-wider animate-pulse border border-red-400/50 shadow-[0_0_12px_rgba(220,38,38,0.7)]">
-              ¡Última Ronda!
-            </span>
-          )}
+
+          {/* Connection Status Badge */}
+          <div
+            data-testid="connection-status"
+            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide border ${
+              isConnected
+                ? 'bg-emerald-950/50 text-emerald-400 border-emerald-700/50'
+                : 'bg-red-950/60 text-red-400 border-red-700/50 animate-pulse'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isConnected ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-red-400'
+              }`}
+            />
+            <span>{isConnected ? 'Conectado' : 'Reconectando...'}</span>
+          </div>
         </div>
+
+        {isFinalRound && (
+          <span className="px-2.5 py-0.5 rounded-full bg-red-600/90 text-white text-center font-bold text-[10px] uppercase tracking-wider animate-pulse border border-red-400/50 shadow-[0_0_10px_rgba(220,38,38,0.7)]">
+            ¡Última Ronda!
+          </span>
+        )}
 
         {/* Turn Status Message */}
         {waitingForPlayers && (
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-300 text-xs sm:text-sm font-medium animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-300 text-[11px] font-medium animate-pulse">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
             <span>Esperando elecciones de los jugadores...</span>
           </div>
         )}
 
-        {/* Connection Status Badge */}
-        <div
-          data-testid="connection-status"
-          className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide border ${
-            isConnected
-              ? 'bg-emerald-950/50 text-emerald-400 border-emerald-700/50'
-              : 'bg-red-950/60 text-red-400 border-red-700/50 animate-pulse'
-          }`}
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isConnected ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-red-400'
-            }`}
-          />
-          <span>{isConnected ? 'Conectado' : 'Reconectando...'}</span>
+        {/* Round Progression Timeline: 9 Steps */}
+        <div className="flex items-center justify-between gap-1 pt-1">
+          {Array.from({ length: maxRondas }, (_, i) => {
+            const step = i + 1;
+            const isActive = step === partida.rondaActual;
+            const isCompleted = step < partida.rondaActual;
+
+            return (
+              <div
+                key={step}
+                data-testid={`round-step-${step}`}
+                data-active={isActive ? 'true' : 'false'}
+                data-completed={isCompleted ? 'true' : 'false'}
+                className="flex-1 flex flex-col items-center gap-0.5"
+              >
+                <div
+                  className={`w-full h-1.5 rounded-full transition-all duration-300 ${
+                    isActive
+                      ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] h-2'
+                      : isCompleted
+                      ? 'bg-amber-600/70'
+                      : 'bg-zinc-800'
+                  }`}
+                />
+                <span
+                  className={`text-[9px] font-mono transition-colors ${
+                    isActive
+                      ? 'text-amber-300 font-bold'
+                      : isCompleted
+                      ? 'text-amber-500/70'
+                      : 'text-zinc-600'
+                  }`}
+                >
+                  R{step}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Round Progression Timeline: 9 Steps */}
-      <div className="flex items-center justify-between gap-1 sm:gap-2 px-2 py-2 rounded-2xl bg-zinc-900/60 border border-zinc-800/80">
-        {Array.from({ length: maxRondas }, (_, i) => {
-          const step = i + 1;
-          const isActive = step === partida.rondaActual;
-          const isCompleted = step < partida.rondaActual;
+      {/* Players List Card */}
+      <div className="p-3 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 backdrop-blur-md shadow-lg flex flex-col gap-2">
+        <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 px-1">
+          Jugadores en Partida
+        </span>
 
-          return (
-            <div
-              key={step}
-              data-testid={`round-step-${step}`}
-              data-active={isActive ? 'true' : 'false'}
-              data-completed={isCompleted ? 'true' : 'false'}
-              className="flex-1 flex flex-col items-center gap-1 group"
-            >
+        <div className="flex flex-col gap-1.5">
+          {partida.jugadores.map((jugador) => {
+            const jId = jugador.id ?? jugador.numeroJugador ?? 1;
+            const pNum = jugador.numeroJugador ?? jugador.id ?? 1;
+            const colorConfig = PLAYER_COLORS[pNum] || PLAYER_COLORS[1];
+            const remainingTokens = getRemainingTokens(jugador);
+            const isExhausted = remainingTokens === 0;
+
+            return (
               <div
-                className={`w-full h-2 rounded-full transition-all duration-300 ${
-                  isActive
-                    ? 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.8)] h-2.5'
-                    : isCompleted
-                    ? 'bg-amber-600/70'
-                    : 'bg-zinc-800'
-                }`}
-              />
-              <span
-                className={`text-[10px] sm:text-xs font-mono transition-colors ${
-                  isActive
-                    ? 'text-amber-300 font-bold'
-                    : isCompleted
-                    ? 'text-amber-500/70'
-                    : 'text-zinc-600'
-                }`}
+                key={jId}
+                data-testid={`player-badge-${jId}`}
+                data-player-color={colorConfig.name}
+                className={`flex items-center justify-between p-2 rounded-xl border ${colorConfig.bg} ${colorConfig.border} transition-all`}
               >
-                R{step}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full border ${colorConfig.border} ${colorConfig.text}`} />
+                  <span className="font-semibold text-xs text-zinc-100 truncate max-w-[90px]">
+                    {jugador.nombre}
+                  </span>
+                </div>
 
-      {/* Players Token Reserves HUD */}
-      <div className="flex flex-wrap items-center justify-around gap-3 pt-1 border-t border-amber-900/30">
-        {partida.jugadores.map((jugador) => {
-          const jId = jugador.id ?? jugador.numeroJugador ?? 1;
-          const pNum = jugador.numeroJugador ?? jugador.id ?? 1;
-          const colorConfig = PLAYER_COLORS[pNum] || PLAYER_COLORS[1];
-          const remainingTokens = getRemainingTokens(jugador);
-          const isExhausted = remainingTokens === 0;
-
-          return (
-            <div
-              key={jId}
-              data-testid={`player-badge-${jId}`}
-              data-player-color={colorConfig.name}
-              className={`flex items-center gap-3 px-3.5 py-2 rounded-2xl border ${colorConfig.bg} ${colorConfig.border} transition-all duration-200 hover:scale-105`}
-            >
-              <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full border ${colorConfig.border} ${colorConfig.text}`} />
-                <span className="font-semibold text-sm sm:text-base text-zinc-100">
-                  {jugador.nombre}
-                </span>
+                <div
+                  data-testid={`token-reserve-${jId}`}
+                  data-reserve-exhausted={isExhausted ? 'true' : undefined}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-mono font-bold border ${
+                    isExhausted
+                      ? 'bg-red-950/60 text-red-400 border-red-700/60'
+                      : 'bg-zinc-950/70 text-amber-200 border-amber-500/30'
+                  }`}
+                >
+                  <span>{remainingTokens}</span>
+                  <span className="text-[9px] text-zinc-400 font-sans">tk</span>
+                </div>
               </div>
-
-              <div
-                data-testid={`token-reserve-${jId}`}
-                data-reserve-exhausted={isExhausted ? 'true' : undefined}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs sm:text-sm font-mono font-bold border ${
-                  isExhausted
-                    ? 'bg-red-950/60 text-red-400 border-red-700/60'
-                    : 'bg-zinc-950/70 text-amber-200 border-amber-500/30'
-                }`}
-              >
-                <span>{remainingTokens}</span>
-                <span className="text-[10px] text-zinc-400 font-sans">tokens</span>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
