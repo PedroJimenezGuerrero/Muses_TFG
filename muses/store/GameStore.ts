@@ -9,6 +9,7 @@ import {
   CartaInspiracion,
   MUSAS_METADATA,
 } from '@/types/game';
+import { ScoreBreakdown, ScoreBreakdownMap } from '@/types/scoring';
 import {
   mapAstroToGrid,
   advanceAstros,
@@ -27,6 +28,126 @@ const INITIAL_MUSAS: TipoMusa[] = [
   'URANIA',
   'CALIOPE',
 ];
+
+export interface ActionResolutionLog {
+  jugadorNombre: string;
+  jugadorNumero: number;
+  cartaNombre: string;
+  tipoAccion: string;
+  prioridad: number;
+  detalle: string;
+}
+
+function calculateScoreBreakdown(tablero: Tablero, jugadores: Jugador[]): ScoreBreakdown {
+  const matrix: ScoreBreakdownMap = {} as any;
+  const playerTotals: Record<number, number> = {};
+  jugadores.forEach((j) => {
+    playerTotals[j.id ?? j.numeroJugador] = 0;
+  });
+
+  tablero.grid.forEach((musa) => {
+    const meta = MUSAS_METADATA[musa.nombre];
+    const tokensByPlayer: Record<number, number> = {};
+    jugadores.forEach((j) => {
+      tokensByPlayer[j.id ?? j.numeroJugador] = 0;
+    });
+
+    musa.tokensColocados.forEach((token: any) => {
+      const pid = token.jugador?.id ?? token.jugadorId ?? token.jugador?.numeroJugador ?? token.numeroJugador ?? 1;
+      tokensByPlayer[pid] = (tokensByPlayer[pid] || 0) + 1;
+    });
+
+    // Rank players with > 0 tokens
+    const ranking = Object.entries(tokensByPlayer)
+      .map(([pidStr, count]) => ({ pid: Number(pidStr), count }))
+      .filter((p) => p.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    const rowMap: Record<string, { tokens: number; points: number }> = {};
+
+    if (ranking.length === 0) {
+      jugadores.forEach((j) => {
+        rowMap[j.nombre] = { tokens: 0, points: 0 };
+      });
+    } else if (ranking.length === 1) {
+      const winner = ranking[0];
+      jugadores.forEach((j) => {
+        const jId = j.id ?? j.numeroJugador;
+        const pts = jId === winner.pid ? meta.nivel1 : 0;
+        rowMap[j.nombre] = { tokens: tokensByPlayer[jId] || 0, points: pts };
+        playerTotals[jId] = (playerTotals[jId] || 0) + pts;
+      });
+    } else {
+      // Handle ties between top players
+      if (ranking[0].count === ranking[1].count) {
+        // 2-way or 3-way tie for 1st
+        const tiedTop = ranking.filter((p) => p.count === ranking[0].count);
+        if (tiedTop.length === 2) {
+          const tiedPoints = Math.floor((meta.nivel1 + meta.nivel2) / 2);
+          const thirdPoints = ranking[2] ? meta.nivel3 : 0;
+          jugadores.forEach((j) => {
+            const jId = j.id ?? j.numeroJugador;
+            let pts = 0;
+            if (tiedTop.some((t) => t.pid === jId)) pts = tiedPoints;
+            else if (ranking[2] && ranking[2].pid === jId) pts = thirdPoints;
+            rowMap[j.nombre] = { tokens: tokensByPlayer[jId] || 0, points: pts };
+            playerTotals[jId] = (playerTotals[jId] || 0) + pts;
+          });
+        } else {
+          // 3+ way tie
+          const tiedPoints = Math.floor((meta.nivel1 + meta.nivel2 + meta.nivel3) / tiedTop.length);
+          jugadores.forEach((j) => {
+            const jId = j.id ?? j.numeroJugador;
+            const pts = tiedTop.some((t) => t.pid === jId) ? tiedPoints : 0;
+            rowMap[j.nombre] = { tokens: tokensByPlayer[jId] || 0, points: pts };
+            playerTotals[jId] = (playerTotals[jId] || 0) + pts;
+          });
+        }
+      } else {
+        // Clear 1st place
+        const firstPid = ranking[0].pid;
+        const firstPts = meta.nivel1;
+        playerTotals[firstPid] = (playerTotals[firstPid] || 0) + firstPts;
+
+        // Check 2nd place tie
+        if (ranking.length >= 3 && ranking[1].count === ranking[2].count) {
+          const tied2nd = ranking.slice(1).filter((p) => p.count === ranking[1].count);
+          const tied2ndPts = Math.floor((meta.nivel2 + meta.nivel3) / tied2nd.length);
+          jugadores.forEach((j) => {
+            const jId = j.id ?? j.numeroJugador;
+            let pts = 0;
+            if (jId === firstPid) pts = firstPts;
+            else if (tied2nd.some((t) => t.pid === jId)) pts = tied2ndPts;
+            rowMap[j.nombre] = { tokens: tokensByPlayer[jId] || 0, points: pts };
+            if (jId !== firstPid) playerTotals[jId] = (playerTotals[jId] || 0) + pts;
+          });
+        } else {
+          // Clear 1st, 2nd, 3rd
+          const secondPid = ranking[1]?.pid;
+          const thirdPid = ranking[2]?.pid;
+          jugadores.forEach((j) => {
+            const jId = j.id ?? j.numeroJugador;
+            let pts = 0;
+            if (jId === firstPid) pts = meta.nivel1;
+            else if (jId === secondPid) pts = meta.nivel2;
+            else if (jId === thirdPid) pts = meta.nivel3;
+            rowMap[j.nombre] = { tokens: tokensByPlayer[jId] || 0, points: pts };
+            if (jId === secondPid) playerTotals[jId] = (playerTotals[jId] || 0) + meta.nivel2;
+            if (jId === thirdPid) playerTotals[jId] = (playerTotals[jId] || 0) + meta.nivel3;
+          });
+        }
+      }
+    }
+    matrix[musa.nombre] = rowMap;
+  });
+
+  return {
+    filas: [],
+    totalesPorJugador: [],
+    ganadores: [],
+    matrix,
+  };
+}
 
 function buildInitialState(): {
   tablero: Tablero;
@@ -48,25 +169,37 @@ function buildInitialState(): {
 
   const jugador1: Jugador = {
     id: 1,
-    nombre: 'Apolo',
+    nombre: 'Apolo (Tú)',
     numeroJugador: 1,
     puntuacionTotal: 0,
     tokens: Array.from({ length: 20 }, (_, idx) => ({
       id: 100 + idx,
       colocado: false,
-      jugador: { id: 1, nombre: 'Apolo', numeroJugador: 1, puntuacionTotal: 0 },
+      jugador: { id: 1, nombre: 'Apolo (Tú)', numeroJugador: 1, puntuacionTotal: 0 },
     })),
   };
 
   const jugador2: Jugador = {
     id: 2,
-    nombre: 'Atenea',
+    nombre: 'Atenea (Bot)',
     numeroJugador: 2,
     puntuacionTotal: 0,
     tokens: Array.from({ length: 20 }, (_, idx) => ({
       id: 200 + idx,
       colocado: false,
-      jugador: { id: 2, nombre: 'Atenea', numeroJugador: 2, puntuacionTotal: 0 },
+      jugador: { id: 2, nombre: 'Atenea (Bot)', numeroJugador: 2, puntuacionTotal: 0 },
+    })),
+  };
+
+  const jugador3: Jugador = {
+    id: 3,
+    nombre: 'Hermes (Bot)',
+    numeroJugador: 3,
+    puntuacionTotal: 0,
+    tokens: Array.from({ length: 20 }, (_, idx) => ({
+      id: 300 + idx,
+      colocado: false,
+      jugador: { id: 3, nombre: 'Hermes (Bot)', numeroJugador: 3, puntuacionTotal: 0 },
     })),
   };
 
@@ -75,15 +208,16 @@ function buildInitialState(): {
     rondaActual: 1,
     maxRondas: 9,
     tablero: initialTablero,
-    jugadores: [jugador1, jugador2],
+    jugadores: [jugador1, jugador2, jugador3],
     ganadores: [],
+    seleccionesRonda: {},
   };
 
   const commonActions: CartaAccion[] = [
-    { id: 101, tipo: 'DEVOCION_SOL', tipoCarta: 'ACCION', nombre: 'Devoción Solar' },
-    { id: 102, tipo: 'DEVOCION_LUNA', tipoCarta: 'ACCION', nombre: 'Devoción Lunar' },
-    { id: 103, tipo: 'REVOLUCION_SOL', tipoCarta: 'ACCION', nombre: 'Revolución Solar' },
-    { id: 104, tipo: 'REVOLUCION_LUNA', tipoCarta: 'ACCION', nombre: 'Revolución Lunar' },
+    { id: 101, tipoCarta: 'ACCION', tipo: 'DEVOCION_SOL', nombre: 'Devoción Solar' },
+    { id: 102, tipoCarta: 'ACCION', tipo: 'DEVOCION_LUNA', nombre: 'Devoción Lunar' },
+    { id: 103, tipoCarta: 'ACCION', tipo: 'REVOLUCION_SOL', nombre: 'Revolución Solar' },
+    { id: 104, tipoCarta: 'ACCION', tipo: 'REVOLUCION_LUNA', nombre: 'Revolución Lunar' },
   ];
 
   const inspirationCard: CartaInspiracion = {
@@ -113,6 +247,9 @@ export class GameStore {
   sala: import('@/types/game').Sala | null = null;
   jugadorActualId: number = 1;
   enPartida: boolean = false;
+  isGameOver: boolean = false;
+  scoreBreakdown: ScoreBreakdown | null = null;
+  actionLogs: ActionResolutionLog[] = [];
 
   constructor() {
     makeAutoObservable(this);
@@ -180,6 +317,7 @@ export class GameStore {
   abandonarSala() {
     this.sala = null;
     this.enPartida = false;
+    this.isGameOver = false;
   }
 
   initGame() {
@@ -191,6 +329,8 @@ export class GameStore {
     this.hoveredCard = null;
     this.isSubmitting = false;
     this.isGameOver = false;
+    this.scoreBreakdown = null;
+    this.actionLogs = [];
     this.notification = null;
   }
 
@@ -225,7 +365,7 @@ export class GameStore {
     if (!card || this.isSubmitting || !this.tablero || !this.partida) return;
 
     this.isSubmitting = true;
-    this.setNotification(`Ejecutando ${card.nombre || 'Acción'}...`);
+    this.setNotification(`Resolviendo turno: ${card.nombre || 'Acción'}...`);
 
     setTimeout(() => {
       if (!this.tablero || !this.partida) return;
@@ -233,16 +373,20 @@ export class GameStore {
       const currentTablero = this.tablero;
       const currentPartida = this.partida;
       const currentCards = [...this.cards];
-      const activePlayer = currentPartida.jugadores[0]; // Active player: Apolo
+      const activePlayer = currentPartida.jugadores[0]; // Apolo
+      const bot1 = currentPartida.jugadores[1]; // Atenea
+      const bot2 = currentPartida.jugadores[2]; // Hermes
 
       let updatedGrid = [...currentTablero.grid];
-      let tokensToDeduct = 0;
+      const newLogs: ActionResolutionLog[] = [];
 
+      // 1. Resolve Player Action
       const cardType = (card as any).tipo || (card as any).tipoCarta;
+      let pTokensDeduct = 0;
 
       if (cardType === 'DEVOCION_SOL') {
         const targetIndex = mapAstroToGrid(currentTablero.solPos);
-        tokensToDeduct = 2;
+        pTokensDeduct = 2;
         const newTokens = Array.from({ length: 2 }, (_, i) => ({
           id: Date.now() + i,
           colocado: true,
@@ -250,13 +394,19 @@ export class GameStore {
           jugadorId: activePlayer.id,
         }));
         updatedGrid = updatedGrid.map((m, idx) =>
-          idx === targetIndex
-            ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] }
-            : m
+          idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] } : m
         );
+        newLogs.push({
+          jugadorNombre: activePlayer.nombre,
+          jugadorNumero: 1,
+          cartaNombre: 'Devoción Solar',
+          tipoAccion: 'DEVOCION_SOL',
+          prioridad: 2,
+          detalle: `Coloca 2 fichas en ${updatedGrid[targetIndex].nombre} (Sol)`,
+        });
       } else if (cardType === 'DEVOCION_LUNA') {
         const targetIndex = mapAstroToGrid(currentTablero.lunaPos);
-        tokensToDeduct = 2;
+        pTokensDeduct = 2;
         const newTokens = Array.from({ length: 2 }, (_, i) => ({
           id: Date.now() + i,
           colocado: true,
@@ -264,12 +414,18 @@ export class GameStore {
           jugadorId: activePlayer.id,
         }));
         updatedGrid = updatedGrid.map((m, idx) =>
-          idx === targetIndex
-            ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] }
-            : m
+          idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] } : m
         );
+        newLogs.push({
+          jugadorNombre: activePlayer.nombre,
+          jugadorNumero: 1,
+          cartaNombre: 'Devoción Lunar',
+          tipoAccion: 'DEVOCION_LUNA',
+          prioridad: 5,
+          detalle: `Coloca 2 fichas en ${updatedGrid[targetIndex].nombre} (Luna)`,
+        });
       } else if (cardType === 'REVOLUCION_SOL') {
-        tokensToDeduct = 1;
+        pTokensDeduct = 1;
         const newToken = {
           id: Date.now(),
           colocado: true,
@@ -280,8 +436,16 @@ export class GameStore {
           idx === 4 ? { ...m, tokensColocados: [...m.tokensColocados, newToken] } : m
         );
         updatedGrid = applyRevolution(updatedGrid, currentTablero.solPos);
+        newLogs.push({
+          jugadorNombre: activePlayer.nombre,
+          jugadorNumero: 1,
+          cartaNombre: 'Revolución Solar',
+          tipoAccion: 'REVOLUCION_SOL',
+          prioridad: 3,
+          detalle: 'Coloca 1 ficha al centro y rota el semiciclo solar',
+        });
       } else if (cardType === 'REVOLUCION_LUNA') {
-        tokensToDeduct = 1;
+        pTokensDeduct = 1;
         const newToken = {
           id: Date.now(),
           colocado: true,
@@ -292,14 +456,18 @@ export class GameStore {
           idx === 4 ? { ...m, tokensColocados: [...m.tokensColocados, newToken] } : m
         );
         updatedGrid = applyRevolution(updatedGrid, currentTablero.lunaPos);
-      } else if (
-        cardType === 'INSPIRACION' ||
-        (card as any).tipoMusa ||
-        (card as any).nombreMusa
-      ) {
+        newLogs.push({
+          jugadorNombre: activePlayer.nombre,
+          jugadorNumero: 1,
+          cartaNombre: 'Revolución Lunar',
+          tipoAccion: 'REVOLUCION_LUNA',
+          prioridad: 4,
+          detalle: 'Coloca 1 ficha al centro y rota el semiciclo lunar',
+        });
+      } else if (cardType === 'INSPIRACION' || (card as any).tipoMusa || (card as any).nombreMusa) {
         const musaName = ((card as any).tipoMusa || (card as any).nombreMusa) as TipoMusa;
         const targetCells = getInspirationTargetCells(musaName, currentTablero.solPos);
-        tokensToDeduct = targetCells.length * 2;
+        pTokensDeduct = targetCells.length * 2;
         targetCells.forEach((targetIndex) => {
           const newTokens = Array.from({ length: 2 }, (_, i) => ({
             id: Date.now() + targetIndex * 10 + i,
@@ -308,18 +476,68 @@ export class GameStore {
             jugadorId: activePlayer.id,
           }));
           updatedGrid = updatedGrid.map((m, idx) =>
-            idx === targetIndex
-              ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] }
-              : m
+            idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] } : m
           );
         });
-
         const cardIdx = currentCards.findIndex((c) => c.id === card.id);
         if (cardIdx !== -1) {
           currentCards[cardIdx] = { ...currentCards[cardIdx], usada: true } as CartaInspiracion;
         }
+        newLogs.push({
+          jugadorNombre: activePlayer.nombre,
+          jugadorNumero: 1,
+          cartaNombre: `Inspiración (${musaName})`,
+          tipoAccion: 'INSPIRACION',
+          prioridad: 1,
+          detalle: `Coloca fichas geométricas según el Sol`,
+        });
       }
 
+      // 2. Simulate Bot 1 (Atenea) Greedy Action
+      if (bot1) {
+        const botSolTarget = mapAstroToGrid(currentTablero.solPos);
+        const botTokens = Array.from({ length: 2 }, (_, i) => ({
+          id: Date.now() + 500 + i,
+          colocado: true,
+          jugador: bot1,
+          jugadorId: bot1.id,
+        }));
+        updatedGrid = updatedGrid.map((m, idx) =>
+          idx === botSolTarget ? { ...m, tokensColocados: [...m.tokensColocados, ...botTokens] } : m
+        );
+        newLogs.push({
+          jugadorNombre: bot1.nombre,
+          jugadorNumero: 2,
+          cartaNombre: 'Devoción Solar',
+          tipoAccion: 'DEVOCION_SOL',
+          prioridad: 2,
+          detalle: `Coloca 2 fichas en ${updatedGrid[botSolTarget].nombre}`,
+        });
+      }
+
+      // 3. Simulate Bot 2 (Hermes) Greedy Action
+      if (bot2) {
+        const botLunaTarget = mapAstroToGrid(currentTablero.lunaPos);
+        const botTokens = Array.from({ length: 2 }, (_, i) => ({
+          id: Date.now() + 800 + i,
+          colocado: true,
+          jugador: bot2,
+          jugadorId: bot2.id,
+        }));
+        updatedGrid = updatedGrid.map((m, idx) =>
+          idx === botLunaTarget ? { ...m, tokensColocados: [...m.tokensColocados, ...botTokens] } : m
+        );
+        newLogs.push({
+          jugadorNombre: bot2.nombre,
+          jugadorNumero: 3,
+          cartaNombre: 'Devoción Lunar',
+          tipoAccion: 'DEVOCION_LUNA',
+          prioridad: 5,
+          detalle: `Coloca 2 fichas en ${updatedGrid[botLunaTarget].nombre}`,
+        });
+      }
+
+      // 4. Advance Astros
       const { solPos: nextSol, lunaPos: nextLuna } = advanceAstros(
         currentTablero.solPos,
         currentTablero.lunaPos
@@ -327,12 +545,19 @@ export class GameStore {
 
       const updatedJugadores = currentPartida.jugadores.map((j, i) => {
         if (i === 0 && j.tokens) {
-          return { ...j, tokens: j.tokens.slice(tokensToDeduct) };
+          return { ...j, tokens: j.tokens.slice(pTokensDeduct) };
+        }
+        if (i === 1 && j.tokens) {
+          return { ...j, tokens: j.tokens.slice(2) };
+        }
+        if (i === 2 && j.tokens) {
+          return { ...j, tokens: j.tokens.slice(2) };
         }
         return j;
       });
 
-      const nextRound = Math.min(currentPartida.rondaActual + 1, currentPartida.maxRondas);
+      const currentRound = currentPartida.rondaActual;
+      const isFinishing = currentRound >= currentPartida.maxRondas;
 
       this.tablero = {
         ...currentTablero,
@@ -341,19 +566,52 @@ export class GameStore {
         grid: updatedGrid,
       };
 
-      this.partida = {
-        ...currentPartida,
-        rondaActual: nextRound,
-        tablero: this.tablero,
-        jugadores: updatedJugadores,
-      };
+      this.actionLogs = newLogs;
 
-      this.cards = currentCards;
-      this.selectedCard = null;
-      this.hoveredCard = null;
-      this.isSubmitting = false;
-      this.setNotification('¡Acción resuelta con éxito! Astros han avanzado.');
-      setTimeout(() => this.setNotification(null), 3000);
+      // 5. Final Round & Scoring check
+      if (isFinishing) {
+        const breakdown = calculateScoreBreakdown(this.tablero, updatedJugadores);
+        const finalJugadores = updatedJugadores.map((j) => {
+          let totalPts = 0;
+          Object.values(breakdown.matrix || {}).forEach((mRow: any) => {
+            if (mRow && mRow[j.nombre]) {
+              totalPts += mRow[j.nombre].points || 0;
+            }
+          });
+          return { ...j, puntuacionTotal: totalPts };
+        });
+
+        const maxScore = Math.max(...finalJugadores.map((j) => j.puntuacionTotal));
+        const winners = finalJugadores.filter((j) => j.puntuacionTotal === maxScore);
+
+        this.partida = {
+          ...currentPartida,
+          rondaActual: currentPartida.maxRondas,
+          tablero: this.tablero,
+          jugadores: finalJugadores,
+          ganadores: winners.map((w) => ({ id: w.id, username: w.nombre })),
+        };
+
+        this.scoreBreakdown = breakdown;
+        this.isGameOver = true;
+        this.isSubmitting = false;
+        this.setNotification('¡Partida finalizada! Calculando favores de las Musas...');
+      } else {
+        const nextRound = currentRound + 1;
+        this.partida = {
+          ...currentPartida,
+          rondaActual: nextRound,
+          tablero: this.tablero,
+          jugadores: updatedJugadores,
+        };
+
+        this.cards = currentCards;
+        this.selectedCard = null;
+        this.hoveredCard = null;
+        this.isSubmitting = false;
+        this.setNotification('Ronda resuelta. Los astros avanzan.');
+        setTimeout(() => this.setNotification(null), 3500);
+      }
     }, 600);
   }
 }

@@ -9,7 +9,7 @@ import { StatusPanel } from '@/components/game/StatusPanel';
 import { PlayerHand } from '@/components/game/PlayerHand';
 import { LobbyView } from '@/components/game/LobbyView';
 import { GameOverModal } from '@/components/game/GameOverModal';
-import { Sparkles, RotateCcw, LogOut, ShieldAlert } from 'lucide-react';
+import { Sparkles, RotateCcw, LogOut, History, ShieldAlert } from 'lucide-react';
 
 const GamePage = observer(() => {
   const store = gameStore;
@@ -99,8 +99,34 @@ const GamePage = observer(() => {
               </section>
             )}
 
-            {/* Right Side Info: Game Tips & Orbit Legend */}
+            {/* Right Side Info: Action Resolution Log & Guide */}
             <aside className="hidden xl:flex w-64 max-w-xs shrink-0 flex-col gap-3 z-20">
+              {/* Turn Action Resolution Log */}
+              {store.actionLogs.length > 0 && (
+                <div className="p-3 rounded-2xl bg-zinc-950/80 border border-amber-500/30 backdrop-blur-md shadow-lg flex flex-col gap-2 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 flex items-center gap-1.5 border-b border-amber-500/20 pb-1">
+                    <History className="w-3.5 h-3.5" />
+                    Resolución de la Ronda
+                  </span>
+                  <div className="space-y-1.5">
+                    {store.actionLogs.map((log, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2 rounded-xl bg-zinc-900/70 border border-zinc-800 text-[11px] flex flex-col gap-0.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-amber-200">{log.jugadorNombre}</span>
+                          <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono">
+                            {log.cartaNombre}
+                          </span>
+                        </div>
+                        <span className="text-zinc-400 text-[10px] leading-tight">{log.detalle}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="p-3.5 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 backdrop-blur-md shadow-lg flex flex-col gap-2 text-xs">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400/90 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
@@ -147,8 +173,8 @@ const GamePage = observer(() => {
         <GameOverModal
           isOpen={store.isGameOver}
           partida={store.partida}
-          onPlayAgain={() => store.resetGame()}
-          onClose={() => store.abandonarSala()}
+          breakdown={store.scoreBreakdown || { filas: [], totalesPorJugador: [], ganadores: [] }}
+          onRestart={() => store.resetGame()}
         />
       )}
     </div>
