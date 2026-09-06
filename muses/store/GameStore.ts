@@ -493,9 +493,9 @@ export class GameStore {
         });
       }
 
-      // 2. Simulate Bot 1 (Atenea) Greedy Action
+      // 2. Simulate Bot 1 (Atenea) Greedy Action (Targeting Luna or Central Area)
       if (bot1) {
-        const botSolTarget = mapAstroToGrid(currentTablero.solPos);
+        const botTarget = mapAstroToGrid(currentTablero.lunaPos);
         const botTokens = Array.from({ length: 2 }, (_, i) => ({
           id: Date.now() + 500 + i,
           colocado: true,
@@ -503,37 +503,37 @@ export class GameStore {
           jugadorId: bot1.id,
         }));
         updatedGrid = updatedGrid.map((m, idx) =>
-          idx === botSolTarget ? { ...m, tokensColocados: [...m.tokensColocados, ...botTokens] } : m
+          idx === botTarget ? { ...m, tokensColocados: [...m.tokensColocados, ...botTokens] } : m
         );
         newLogs.push({
           jugadorNombre: bot1.nombre,
           jugadorNumero: 2,
-          cartaNombre: 'Devoción Solar',
-          tipoAccion: 'DEVOCION_SOL',
-          prioridad: 2,
-          detalle: `Coloca 2 fichas en ${updatedGrid[botSolTarget].nombre}`,
+          cartaNombre: 'Devoción Lunar',
+          tipoAccion: 'DEVOCION_LUNA',
+          prioridad: 5,
+          detalle: `Coloca 2 fichas en ${updatedGrid[botTarget].nombre} (Luna)`,
         });
       }
 
-      // 3. Simulate Bot 2 (Hermes) Greedy Action
+      // 3. Simulate Bot 2 (Hermes) Greedy Action (Revolution or Center Area)
       if (bot2) {
-        const botLunaTarget = mapAstroToGrid(currentTablero.lunaPos);
-        const botTokens = Array.from({ length: 2 }, (_, i) => ({
-          id: Date.now() + 800 + i,
+        const botTarget = 4; // Center
+        const botToken = {
+          id: Date.now() + 800,
           colocado: true,
           jugador: bot2,
           jugadorId: bot2.id,
-        }));
+        };
         updatedGrid = updatedGrid.map((m, idx) =>
-          idx === botLunaTarget ? { ...m, tokensColocados: [...m.tokensColocados, ...botTokens] } : m
+          idx === botTarget ? { ...m, tokensColocados: [...m.tokensColocados, botToken] } : m
         );
         newLogs.push({
           jugadorNombre: bot2.nombre,
           jugadorNumero: 3,
-          cartaNombre: 'Devoción Lunar',
-          tipoAccion: 'DEVOCION_LUNA',
-          prioridad: 5,
-          detalle: `Coloca 2 fichas en ${updatedGrid[botLunaTarget].nombre}`,
+          cartaNombre: 'Revolución',
+          tipoAccion: 'REVOLUCION_LUNA',
+          prioridad: 4,
+          detalle: `Coloca 1 ficha al centro`,
         });
       }
 
