@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { gameStore } from '@/store';
 import { AnyCard } from '@/types/game';
@@ -9,15 +9,22 @@ import { StatusPanel } from '@/components/game/StatusPanel';
 import { PlayerHand } from '@/components/game/PlayerHand';
 import { LobbyView } from '@/components/game/LobbyView';
 import { GameOverModal } from '@/components/game/GameOverModal';
-import { Sparkles, RotateCcw, LogOut, History, ShieldAlert } from 'lucide-react';
+import { AuthModal, ProfileModal } from '@/components/auth';
+import { useGameSocket } from '@/hooks/useGameSocket';
+import { Sparkles, RotateCcw, LogOut, History, User, ShieldCheck } from 'lucide-react';
 
 const GamePage = observer(() => {
   const store = gameStore;
+  const [authOpen, setAuthOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  // Connect STOMP socket hook
+  useGameSocket();
 
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '/api/v1';
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
         const response = await fetch(`${backendUrl}/status`);
         store.setConnected(response.ok);
       } catch {
@@ -35,7 +42,7 @@ const GamePage = observer(() => {
           <span className="text-2xl font-serif font-black tracking-widest bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent">
             MUSES
           </span>
-          <span className="text-[10px] uppercase tracking-widest text-amber-500/70 border-l border-amber-600/40 pl-2">
+          <span className="text-[10px] uppercase tracking-widest text-amber-500/70 border-l border-amber-600/40 pl-2 hidden sm:inline">
             Estrategia Mitológica
           </span>
         </div>
@@ -46,29 +53,54 @@ const GamePage = observer(() => {
           </div>
         )}
 
-        {store.enPartida && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          {/* User Profile / Auth Button */}
+          {store.usuario ? (
             <button
               type="button"
-              aria-label="Reiniciar Partida"
-              onClick={() => store.resetGame()}
-              title="Reiniciar Partida"
-              className="px-3 py-1 rounded-xl text-xs font-semibold bg-zinc-900 border border-zinc-700 hover:border-amber-400 text-zinc-300 hover:text-amber-200 transition-all flex items-center gap-1.5"
+              onClick={() => setProfileOpen(true)}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-900 border border-amber-500/30 hover:border-amber-400 text-amber-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reiniciar Partida</span>
+              <div className="w-4 h-4 rounded-full bg-amber-500 text-black flex items-center justify-center text-[10px] font-bold">
+                {store.usuario.username.charAt(0).toUpperCase()}
+              </div>
+              <span className="max-w-[100px] truncate">{store.usuario.username}</span>
             </button>
+          ) : (
             <button
               type="button"
-              onClick={() => store.abandonarSala()}
-              title="Salir al Lobby"
-              className="px-3 py-1 rounded-xl text-xs font-semibold bg-red-950/40 border border-red-800/50 hover:bg-red-900/50 text-red-300 transition-all flex items-center gap-1.5"
+              onClick={() => setAuthOpen(true)}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 text-amber-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Lobby</span>
+              <User className="w-3.5 h-3.5" />
+              <span>Acceder</span>
             </button>
-          </div>
-        )}
+          )}
+
+          {store.enPartida && (
+            <>
+              <button
+                type="button"
+                aria-label="Reiniciar Partida"
+                onClick={() => store.resetGame()}
+                title="Reiniciar Partida"
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-900 border border-zinc-700 hover:border-amber-400 text-zinc-300 hover:text-amber-200 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Reiniciar</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => store.abandonarSala()}
+                title="Salir al Lobby"
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-950/40 border border-red-800/50 hover:bg-red-900/50 text-red-300 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Lobby</span>
+              </button>
+            </>
+          )}
+        </div>
       </header>
 
       {/* Main Play Area — Side-by-Side Screen Layout (No Scroll) */}
@@ -167,6 +199,10 @@ const GamePage = observer(() => {
           isSubmitting={store.isSubmitting}
         />
       )}
+
+      {/* Auth & Profile Modals */}
+      <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
+      <ProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
 
       {/* Game Over Modal */}
       {store.enPartida && store.isGameOver && store.partida && (
