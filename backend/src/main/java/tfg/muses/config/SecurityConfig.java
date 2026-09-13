@@ -23,8 +23,14 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/partida/**").permitAll()
                         .requestMatchers("/api/v1/partida/**").permitAll()
+                        .requestMatchers("/api/v1/salas/**").permitAll()
+                        .requestMatchers("/api/v1/**").permitAll()
                         .requestMatchers("/ronda/**").permitAll()
-                        .anyRequest().authenticated());
+                        .requestMatchers("/usuario/**").permitAll()
+                        .requestMatchers("/tablero/**").permitAll()
+                        .requestMatchers("/jugador/**").permitAll()
+                        .requestMatchers("/estadisticas/**").permitAll()
+                        .anyRequest().permitAll());
 
         return http.build();
     }
