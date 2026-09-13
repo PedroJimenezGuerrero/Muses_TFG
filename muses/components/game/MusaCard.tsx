@@ -10,6 +10,8 @@ export interface MusaCardProps {
   isHighlighted?: boolean;
   highlightType?: 'sun' | 'moon' | 'inspiration' | 'revolution';
   isRevolutionMember?: boolean;
+  isReceivingTokens?: boolean;
+  isRevolutionAnimating?: boolean;
   tokens?: Musa['tokensColocados'];
   className?: string;
   onClick?: () => void;
@@ -21,6 +23,8 @@ export const MusaCard = observer<MusaCardProps>(({
   isHighlighted,
   highlightType,
   isRevolutionMember,
+  isReceivingTokens,
+  isRevolutionAnimating,
   tokens,
   className = '',
   onClick,
@@ -42,7 +46,11 @@ export const MusaCard = observer<MusaCardProps>(({
 
   // Compute highlight styling
   let highlightStyles = '';
-  if (activeHighlight === 'sun') {
+  if (isReceivingTokens) {
+    highlightStyles = 'ring-4 ring-amber-300 shadow-[0_0_40px_rgba(251,191,36,1)] scale-110 z-40 animate-pulse';
+  } else if (isRevolutionAnimating) {
+    highlightStyles = 'ring-4 ring-emerald-300 shadow-[0_0_35px_rgba(52,211,153,0.9)] scale-105 z-30 transition-all duration-500';
+  } else if (activeHighlight === 'sun') {
     highlightStyles = 'ring-4 ring-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.85)] z-20 scale-105';
   } else if (activeHighlight === 'moon') {
     highlightStyles = 'ring-4 ring-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.85)] z-20 scale-105';

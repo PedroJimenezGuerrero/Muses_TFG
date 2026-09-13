@@ -9,6 +9,8 @@ export interface BoardProps {
   tablero: Tablero;
   hoveredCard?: AnyCard | CartaAccion | CartaInspiracion | null;
   selectedCard?: AnyCard | CartaAccion | CartaInspiracion | null;
+  activeMusaIndex?: number | null;
+  revolutionAnimating?: boolean;
   onPositionSelect?: (pos: number) => void;
   onCardClick?: (index: number) => void;
   className?: string;
@@ -18,6 +20,8 @@ export const Board = observer<BoardProps>(({
   tablero,
   hoveredCard,
   selectedCard,
+  activeMusaIndex,
+  revolutionAnimating,
   onPositionSelect,
   onCardClick,
   className = '',
@@ -102,13 +106,17 @@ export const Board = observer<BoardProps>(({
         >
           {tablero.grid.map((musa, index) => {
             const { highlightType, isRevolutionMember } = getCellHighlightInfo(index);
+            const isReceiving = activeMusaIndex === index;
+            const isRevMember = isRevolutionMember ?? (revolutionAnimating && (index === 4 || index === mapAstroToGrid(tablero.solPos) || index === mapAstroToGrid(tablero.lunaPos)));
             return (
               <MusaCard
                 key={musa.id ?? index}
                 musa={musa}
                 index={index}
                 highlightType={highlightType}
-                isRevolutionMember={isRevolutionMember}
+                isRevolutionMember={isRevMember}
+                isReceivingTokens={isReceiving}
+                isRevolutionAnimating={revolutionAnimating && (isRevolutionMember || index === 4)}
                 tokens={musa.tokensColocados}
                 onClick={() => onCardClick?.(index)}
               />

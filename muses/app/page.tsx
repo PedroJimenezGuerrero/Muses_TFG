@@ -127,6 +127,8 @@ const GamePage = observer(() => {
                   tablero={store.tablero}
                   hoveredCard={store.hoveredCard}
                   selectedCard={store.selectedCard}
+                  activeMusaIndex={store.activeMusaIndex}
+                  revolutionAnimating={store.revolutionAnimating}
                 />
               </section>
             )}
