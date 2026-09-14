@@ -1,7 +1,6 @@
-version: '3.8'
 services:
   app:
-    image: mcr.microsoft.com/devcontainers/java:1-21-bullseye
+    image: mcr.microsoft.com/devcontainers/java:1-21-bookworm
     volumes:
       - ../:/workspaces/Muses_TFG:cached
 
@@ -17,12 +16,12 @@ services:
     env_file:
       - ../.env
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-${POSTGRES_DB:-muses}}
+      POSTGRES_USER: ${DB_USER:-${POSTGRES_USER:-muses}}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-${POSTGRES_PASSWORD:-muses_super_safe_password}}
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./.devcontainer/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   db_data:
