@@ -10,6 +10,8 @@ export interface MusaCardProps {
   isHighlighted?: boolean;
   highlightType?: 'sun' | 'moon' | 'inspiration' | 'revolution';
   isRevolutionMember?: boolean;
+  isReceivingTokens?: boolean;
+  isRevolutionAnimating?: boolean;
   tokens?: Musa['tokensColocados'];
   className?: string;
   onClick?: () => void;
@@ -21,11 +23,14 @@ export const MusaCard = observer<MusaCardProps>(({
   isHighlighted,
   highlightType,
   isRevolutionMember,
+  isReceivingTokens,
+  isRevolutionAnimating,
   tokens,
   className = '',
   onClick,
 }) => {
   const [imgError, setImgError] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const meta = MUSAS_METADATA[musa.nombre] || MUSAS_METADATA.CLIO;
   const isCenter = index === 4;
@@ -41,16 +46,20 @@ export const MusaCard = observer<MusaCardProps>(({
 
   // Compute highlight styling
   let highlightStyles = '';
-  if (activeHighlight === 'sun') {
-    highlightStyles = 'ring-2 ring-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.75)] animate-pulse';
+  if (isReceivingTokens) {
+    highlightStyles = 'ring-4 ring-amber-300 shadow-[0_0_40px_rgba(251,191,36,1)] scale-110 z-40 animate-pulse';
+  } else if (isRevolutionAnimating) {
+    highlightStyles = 'ring-4 ring-emerald-300 shadow-[0_0_35px_rgba(52,211,153,0.9)] scale-105 z-30 transition-all duration-500';
+  } else if (activeHighlight === 'sun') {
+    highlightStyles = 'ring-4 ring-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.85)] z-20 scale-105';
   } else if (activeHighlight === 'moon') {
-    highlightStyles = 'ring-2 ring-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.75)] animate-pulse';
+    highlightStyles = 'ring-4 ring-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.85)] z-20 scale-105';
   } else if (activeHighlight === 'inspiration') {
-    highlightStyles = 'ring-2 ring-purple-500 shadow-[0_0_25px_rgba(168,85,247,0.85)] animate-pulse';
+    highlightStyles = 'ring-4 ring-purple-500 shadow-[0_0_35px_rgba(168,85,247,0.95)] z-20 scale-105';
   } else if (isRevolutionMember === true) {
-    highlightStyles = 'ring-2 ring-emerald-400 shadow-[0_0_16px_rgba(16,185,129,0.7)] animate-pulse';
+    highlightStyles = 'ring-3 ring-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.75)] z-10';
   } else if (isRevolutionMember === false) {
-    highlightStyles = 'opacity-40 grayscale';
+    highlightStyles = 'opacity-35 grayscale';
   }
 
   return (
@@ -61,74 +70,90 @@ export const MusaCard = observer<MusaCardProps>(({
       data-highlight={activeHighlight}
       data-revolution-member={isRevolutionMember !== undefined ? (isRevolutionMember ? 'true' : 'false') : undefined}
       onClick={onClick}
-      className={`relative flex flex-col justify-between w-28 h-40 sm:w-36 sm:h-52 p-2 sm:p-2.5 rounded-2xl bg-gradient-to-b from-slate-900 to-zinc-950 border border-amber-900/40 text-amber-50 shadow-lg select-none transition-all duration-300 hover:scale-[1.02] ${highlightStyles} ${className}`}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      className={`group relative flex items-center justify-center w-28 h-40 sm:w-36 sm:h-52 rounded-2xl bg-zinc-950 border border-amber-900/40 text-amber-50 shadow-xl select-none transition-all duration-300 hover:scale-105 hover:z-30 cursor-pointer overflow-visible ${highlightStyles} ${className}`}
     >
-      {/* Center Muse indicator ribbon */}
+      {/* Center Muse indicator badge */}
       {isCenter && (
-        <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-amber-600/90 text-[9px] font-bold tracking-wider text-amber-100 uppercase shadow-md border border-amber-400/30 z-10">
+        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 text-[10px] font-bold tracking-wider text-black uppercase shadow-lg border border-amber-300/40 z-30">
           Centro
         </span>
       )}
 
-      {/* Header: Musa Name */}
-      <div className="flex flex-col items-center justify-center pt-0.5">
-        <span className="text-xs sm:text-sm font-serif font-bold tracking-wide text-amber-200 uppercase drop-shadow-sm">
-          {musa.nombre}
-        </span>
-        <span className="text-[9px] text-amber-400/70 font-sans tracking-tight line-clamp-1">
-          {meta.domain}
-        </span>
-      </div>
-
-      {/* Illustration Area */}
-      <div className="relative flex-1 flex items-center justify-center my-1 overflow-hidden rounded-xl bg-black/40 border border-amber-950/50">
+      {/* Full-bleed Illustration */}
+      <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black/60">
         {!imgError ? (
           <img
             src={`/assets/musas/${musa.nombre.toLowerCase()}.png`}
             alt={musa.nombre}
             onError={() => setImgError(true)}
-            className="w-full h-full object-cover object-center rounded-xl transition-transform duration-300 group-hover:scale-105"
+            className="w-full h-full object-cover object-center rounded-2xl transition-transform duration-500 group-hover:scale-110"
           />
         ) : (
-          <div data-vector-fallback="true" className="w-full h-full flex items-center justify-center p-1">
-            <MusaSvg musa={musa.nombre} size={70} showPoints={false} />
+          <div data-vector-fallback="true" className="w-full h-full flex items-center justify-center p-2">
+            <MusaSvg musa={musa.nombre} size={90} showPoints={false} />
           </div>
         )}
 
         {/* Placed Devotion Tokens overlay */}
         {placedTokens.length > 0 && (
-          <div className="absolute inset-0 p-1 flex flex-wrap items-center justify-center gap-1 bg-black/40 backdrop-blur-[2px] rounded-xl z-20 overflow-y-auto">
-            {placedTokens.map((token, idx) => {
-              const pId = (token as any).jugadorId ?? token.jugador?.numeroJugador ?? token.jugador?.id ?? 1;
+          <div className="absolute inset-x-0 bottom-0 p-1.5 flex flex-wrap items-center justify-center gap-1 bg-gradient-to-t from-black/90 via-black/50 to-transparent rounded-b-2xl z-20">
+            {placedTokens.map((token: any, tIdx: number) => {
+              const pId = token.jugador?.id ?? token.jugadorId ?? token.jugador?.numeroJugador ?? token.numeroJugador ?? 1;
+              const pNum = token.jugador?.numeroJugador ?? token.numeroJugador ?? pId ?? 1;
               return (
                 <DevotionToken
-                  key={token.id ?? idx}
+                  key={token.id ?? `token-${tIdx}`}
                   id={token.id}
                   playerId={pId}
-                  size={20}
-                  className="shadow-md"
+                  playerNumber={pNum}
+                  size={24}
                 />
               );
             })}
           </div>
         )}
+
+        {/* Screen Reader & DOM Accessible Text Summary */}
+        <span className="sr-only">
+          {musa.nombre} {meta.domain} 1º: {nivel1} 2º: {nivel2} 3º: {nivel3}
+        </span>
       </div>
 
-      {/* Footer: Level 1, 2, 3 Points Badges */}
-      <div className="flex items-center justify-between gap-1 pt-1 border-t border-amber-900/30 text-[10px] sm:text-xs font-semibold">
-        <div className="flex-1 flex flex-col items-center px-1 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-300" title="1º Puesto">
-          <span className="text-[8px] text-amber-400/80">1º</span>
-          <span>{nivel1}</span>
+      {/* Floating Info Tooltip on Hover */}
+      {showTooltip && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 p-3 rounded-2xl bg-zinc-950/95 border border-amber-500/40 shadow-2xl backdrop-blur-md z-50 text-left pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex items-center justify-between border-b border-amber-500/20 pb-1.5 mb-1.5">
+            <div>
+              <span className="font-serif font-bold text-sm text-amber-200 block leading-tight">
+                {musa.nombre}
+              </span>
+              <span className="text-[10px] text-amber-400/80 font-sans tracking-tight">
+                {meta.domain}
+              </span>
+            </div>
+            <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-bold">
+              {meta.tipoInspiracion}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1 text-center bg-black/40 rounded-xl p-1.5 border border-white/5">
+            <div className="flex flex-col">
+              <span className="text-[9px] text-zinc-400 uppercase font-semibold">1º</span>
+              <span className="text-xs font-bold text-amber-400 font-mono">{nivel1} pts</span>
+            </div>
+            <div className="flex flex-col border-x border-zinc-800">
+              <span className="text-[9px] text-zinc-400 uppercase font-semibold">2º</span>
+              <span className="text-xs font-bold text-zinc-200 font-mono">{nivel2} pts</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[9px] text-zinc-400 uppercase font-semibold">3º</span>
+              <span className="text-xs font-bold text-amber-600/80 font-mono">{nivel3} pts</span>
+            </div>
+          </div>
         </div>
-        <div className="flex-1 flex flex-col items-center px-1 py-0.5 rounded bg-slate-800/60 border border-slate-700/50 text-slate-300" title="2º Puesto">
-          <span className="text-[8px] text-slate-400/80">2º</span>
-          <span>{nivel2}</span>
-        </div>
-        <div className="flex-1 flex flex-col items-center px-1 py-0.5 rounded bg-orange-950/40 border border-orange-800/40 text-orange-300" title="3º Puesto">
-          <span className="text-[8px] text-orange-400/80">3º</span>
-          <span>{nivel3}</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 });

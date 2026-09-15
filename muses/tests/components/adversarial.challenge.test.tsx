@@ -16,6 +16,7 @@ import PlayerHand from '@/components/game/PlayerHand';
 import ActionCard from '@/components/game/ActionCard';
 import InspirationCard from '@/components/game/InspirationCard';
 import GamePage from '@/app/page';
+import { gameStore } from '@/store';
 
 describe('Adversarial Challenge: DOM Semantics, ARIA Accessibility & Interaction Contracts (M1)', () => {
   // --------------------------------------------------------------------------
@@ -233,6 +234,12 @@ describe('Adversarial Challenge: DOM Semantics, ARIA Accessibility & Interaction
   // Dimension 5: Interactive page.tsx State & Turn Simulation Flow
   // --------------------------------------------------------------------------
   describe('Dimension 5: page.tsx Interactive Simulation & Edge Cases', () => {
+    beforeEach(() => {
+      act(() => {
+        gameStore.iniciarPartidaContraBots();
+      });
+    });
+
     it('CH-PAGE-01: STRESS (Semantic Landmark): Brand title in page.tsx is a span, missing an h1 heading element', () => {
       const { container } = render(<GamePage />);
       const brandSpan = container.querySelector('header span.text-2xl');
