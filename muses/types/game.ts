@@ -92,6 +92,18 @@ export interface Partida {
   version?: number;
 }
 
+export type EstadoSala = 'ESPERANDO' | 'EN_CURSO' | 'FINALIZADA';
+
+export interface Sala {
+  id?: number;
+  codigo: string;
+  estado: EstadoSala;
+  maxJugadores: number;
+  anfitrion?: Jugador;
+  jugadores: Jugador[];
+  partida?: Partida;
+}
+
 export type PartidaState = Partida;
 
 /**
