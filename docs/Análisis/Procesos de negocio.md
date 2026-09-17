@@ -21,36 +21,39 @@ Los diagramas están elaborados utilizando la notación **Mermaid (`flowchart TD
 
 | Código CU | Nombre del Caso de Uso | Rol Principal | Rol Secundario / Sistema |
 | :--- | :--- | :--- | :--- |
-| **CU-01** | Registrar Nuevo Usuario | Usuario no Autenticado | Sistema Backend / Base de Datos |
-| **CU-02** | Iniciar Sesión (Login) | Usuario no Autenticado | Sistema Backend |
-| **CU-03** | Consultar Perfil de Usuario | Jugador Autenticado | Sistema Backend |
-| **CU-04** | Modificar Perfil de Usuario | Jugador Autenticado | Sistema Backend |
-| **CU-05** | Dar de Baja / Eliminar Cuenta | Jugador Autenticado | Sistema Backend |
-| **CU-06** | Crear Nueva Partida | Jugador Anfitrión | Sistema Backend |
-| **CU-07** | Listar y Buscar Partidas Activas | Jugador Autenticado | Sistema Backend |
-| **CU-08** | Unirse a Partida Existente | Jugador Invitado | Sistema Backend |
-| **CU-09** | Iniciar Partida desde Lobby | Jugador Anfitrión | Sistema Backend / Servicio WebSocket |
-| **CU-10** | Abandonar / Cancelar Partida | Jugador / Anfitrión | Sistema Backend |
-| **CU-11** | Consultar Estado del Tablero | Jugador en Partida | Sistema Backend |
-| **CU-12** | Seleccionar y Jugar Carta de Acción | Jugador Activo | Sistema Backend |
-| **CU-13** | Seleccionar y Jugar Carta de Inspiración | Jugador Activo | Sistema Backend |
-| **CU-14** | Ejecutar Rotación de Astros | Jugador Activo | Sistema Backend |
-| **CU-15** | Ejecutar Revolución Solar | Jugador Activo | Sistema Backend |
-| **CU-16** | Ejecutar Revolución Lunar | Jugador Activo | Sistema Backend |
-| **CU-17** | Mover y Posicionar Musas | Jugador Activo | Sistema Backend |
-| **CU-18** | Gestionar Tokens / Fichas en Astros | Jugador Activo | Sistema Backend |
-| **CU-19** | Evaluar Victoria y Cierre de Partida | Sistema Backend | Jugadores en Partida |
-| **CU-20** | Consultar Estadísticas de Jugador | Jugador Autenticado | Sistema Backend |
-| **CU-21** | Consultar Ranking y Métricas Globales | Jugador / Administrador | Sistema Backend |
-| **CU-22** | Administración de Usuarios y Partidas | Administrador | Sistema Backend |
+| **CU-08** | Registrar e Iniciar Sesión de Usuario | Usuario no Autenticado | Sistema Backend / Base de Datos |
+| **CU-20** | Consultar Perfil y Estadísticas | Jugador Autenticado | Sistema Backend |
+| **CU-33** | Crear Sala de Juego | Jugador Anfitrión | Sistema Backend |
+| **CU-34** | Unirse a la Sala de Juego | Jugador Invitado | Sistema Backend |
+| **CU-35** | Gestionar Desconexión de Jugadores | Sistema Backend | Jugadores / Bot Autómata |
+| **CU-09** | Generar Disposición Inicial de 9 Musas | Sistema Backend | Tablero de Juego |
+| **CU-10** | Repartir Cartas de Acción Iniciales | Sistema Backend | Jugadores en Partida |
+| **CU-11** | Asignar Carta de Inspiración | Sistema Backend | Jugadores en Partida |
+| **CU-12** | Establecer Posición Inicial de Sol y Luna | Sistema Backend | Tablero de Juego |
+| **CU-01** | Identificar Musas en Posición de Sol y Luna | Sistema Backend | Tablero de Juego |
+| **CU-02** | Mover Tokens Sol y Luna en Sentido Horario | Sistema Backend | Tablero de Juego |
+| **CU-03** | Rotar en Revolución las Musas del Tablero | Sistema Backend | Tablero de Juego |
+| **CU-04** | Seleccionar Carta de Acción / Inspiración | Jugador en Partida | Sistema Backend |
+| **CU-05** | Resolver Conflictos de Prioridad y Votación | Sistema Backend | Jugadores en Partida |
+| **CU-06** | Ejecutar Acción de la Carta Jugada | Sistema Backend | Tablero de Juego / Jugadores |
+| **CU-07** | Validar Disponibilidad de Carta de Inspiración | Sistema Backend | Jugador Activo |
+| **CU-13** | Incrementar Contador de Ronda | Sistema Backend | Estado de Partida |
+| **CU-14** | Finalizar Sesión de Juego tras Ronda 9 | Sistema Backend | Estado de Partida |
+| **CU-15** | Contabilizar Tokens de Devoción por Musa | Sistema Backend | Jugadores / Tablero |
+| **CU-16** | Calcular Puntos Obtenidos por Musa | Sistema Backend | Jugadores en Partida |
+| **CU-17** | Resolver Empates de Puntuación | Sistema Backend | Jugadores en Partida |
+| **CU-18** | Calcular Puntuación Final de Jugadores | Sistema Backend | Jugadores en Partida |
+| **CU-19** | Determinar Ganador de la Partida | Sistema Backend | Jugadores en Partida |
+| **CU-31** | Calcular Mejor Jugada para Bot | Bot Autómata | Sistema Backend |
+| **CU-32** | Ejecutar Acciones del Bot | Sistema Backend | Bot Autómata |
 
 ---
 
 ## 3. Diagramas de Procesos de Negocio por Módulo
 
-### Módulo 1: Gestión de Usuarios y Autenticación (CU-01 a CU-05)
+### Módulo 1: Gestión de Usuarios y Autenticación (CU-08, CU-20)
 
-#### Proceso 1.1: Registro de Nuevo Usuario (CU-01)
+#### Proceso 1.1: Registro de Nuevo Usuario (CU-08)
 ```mermaid
 flowchart TD
     subgraph Usuario ["👤 Usuario no Autenticado"]
@@ -62,20 +65,19 @@ flowchart TD
     subgraph Backend ["💻 Sistema Backend Muses"]
         D --> E{¿Username o Email existen?}
         E -- Sí --> F[Devolver error: Usuario o Email en uso]
-        E -- No --> G[Encriptar contraseña]
-        G --> H[Crear entidad Usuario en BD]
-        H --> I[Inicializar entidad Estadisticas asociadas]
-        I --> J[Generar Token JWT de Sesión]
+        E -- No --> G[Registrar nuevo usuario en BD]
+        G --> H[Inicializar estadísticas del jugador]
+        H --> I[Crear sesión de usuario]
     end
 
     subgraph Cliente ["🖥️ Cliente Frontend"]
         F --> B
-        J --> K[Almacenar Token JWT en LocalStorage]
-        K --> L(( 🔴 Fin: Registro Completado y Sesión Iniciada ))
+        I --> J[Establecer sesión autenticada]
+        J --> K(( 🔴 Fin: Registro Completado y Sesión Iniciada ))
     end
 ```
 
-#### Proceso 1.2: Iniciar Sesión / Login (CU-02)
+#### Proceso 1.2: Iniciar Sesión / Login (CU-08)
 ```mermaid
 flowchart TD
     subgraph Usuario ["👤 Usuario no Autenticado"]
@@ -85,22 +87,19 @@ flowchart TD
     end
 
     subgraph Backend ["💻 Sistema Backend"]
-        D --> E{¿Usuario existe en BD?}
+        D --> E{¿Credenciales válidas?}
         E -- No --> F[Devolver error: Credenciales inválidas]
-        E -- Sí --> G{¿Contraseña coincide?}
-        G -- No --> F
-        G -- Sí --> H[Generar Token JWT firmado]
-        H --> I[Devolver Token JWT y Perfil]
+        E -- Sí --> G[Iniciar sesión y cargar perfil de usuario]
     end
 
     subgraph Cliente ["🖥️ Cliente Frontend"]
         F --> B
-        I --> J[Establecer Estado Autenticado en App]
-        J --> K(( 🔴 Fin: Redirección a Menú Principal ))
+        G --> H[Establecer Estado Autenticado en App]
+        H --> I(( 🔴 Fin: Redirección a Menú Principal ))
     end
 ```
 
-#### Proceso 1.3: Gestión de Perfil de Usuario (CU-03, CU-04, CU-05)
+#### Proceso 1.3: Gestión de Perfil de Usuario (CU-20)
 ```mermaid
 flowchart TD
     subgraph Jugador ["👤 Jugador Autenticado"]
@@ -133,9 +132,9 @@ flowchart TD
 
 ---
 
-### Módulo 2: Gestión de Partidas y Lobbies (CU-06 a CU-10)
+### Módulo 2: Gestión de Partidas y Lobbies (CU-33, CU-34, CU-35, CU-09 a CU-12)
 
-#### Proceso 2.1: Crear Partida (CU-06) y Unirse a Lobby (CU-07, CU-08)
+#### Proceso 2.1: Crear Partida (CU-33) y Unirse a Lobby (CU-34)
 ```mermaid
 flowchart TD
     subgraph Anfitrion ["👤 Jugador Anfitrión"]
@@ -170,7 +169,7 @@ flowchart TD
     end
 ```
 
-#### Proceso 2.2: Iniciar y Abandonar Partida (CU-09, CU-10)
+#### Proceso 2.2: Iniciar (CU-09 a CU-12) y Abandonar/Desconexión de Partida (CU-35)
 ```mermaid
 flowchart TD
     subgraph Anfitrion ["👤 Jugador Anfitrión"]
@@ -207,149 +206,109 @@ flowchart TD
 
 ---
 
-### Módulo 3: Desarrollo del Juego y Mecánicas de Tablero (CU-11 a CU-19)
 
-#### Proceso 3.1: Consulta de Tablero y Ejecución de Cartas (CU-11, CU-12, CU-13)
+### Módulo 3: Desarrollo de la Ronda y Mecánicas de Juego (CU-01 a CU-07, CU-13 a CU-19)
+
+#### Proceso 3.1: Ronda de Juego - Selección de Cartas y Resolución por Mayoría/Prioridad (CU-04, CU-05, CU-06, CU-07)
 ```mermaid
 flowchart TD
-    subgraph JugadorActivo ["👤 Jugador en Turno Activo"]
-        A(( 🟢 Inicio de Turno )) --> B[Consultar estado del tablero]
-        B --> C[Evaluar cartas en mano]
-        C --> D{¿Qué tipo de carta jugar?}
-        
-        D -- Carta de Acción --> E[Seleccionar Carta de Acción]
-        E --> F[Enviar jugada de carta seleccionada]
-        
-        D -- Carta de Inspiración --> G[Seleccionar Carta de Inspiración]
-        G --> F
-    end
-
-    subgraph Backend ["💻 Sistema Backend Muses"]
-        F --> H{¿Carta pertenece a mano del Jugador?}
-        H -- No --> I[Devolver error: Carta no válida]
-        I --> B
-        H -- Sí --> J{¿Tipo de Carta?}
-        
-        J -- Acción --> K[Ejecutar efecto de carta de Acción]
-        J -- Inspiración --> L[Ejecutar efecto de carta de Inspiración]
-        
-        K --> M[Descartar carta usada]
-        L --> M
-        M --> N[Actualizar estado del tablero en BD]
-        N --> O[Notificar estado actualizado del tablero a jugadores]
-    end
-
-    subgraph TableroUI ["🖥️ Vista del Tablero"]
-        O --> P(( 🔴 Fin: Efecto de Carta Aplicado ))
-    end
-```
-
-#### Proceso 3.2: Mecánicas Astrales - Rotación, Sol y Luna (CU-14, CU-15, CU-16)
-```mermaid
-flowchart TD
-    subgraph JugadorActivo ["👤 Jugador en Turno Activo"]
-        A(( 🟢 Inicio )) --> B{¿Acción Astral deseada?}
-        B -- Rotar Astros --> C[Pulsar 'Rotar Astros']
-        C --> D[Enviar solicitud de rotación de astros]
-
-        B -- Revolución Solar --> E[Pulsar 'Revolución Solar']
-        E --> F[Enviar solicitud de revolución solar]
-
-        B -- Revolución Lunar --> G[Pulsar 'Revolución Lunar']
-        G --> H[Enviar solicitud de revolución lunar]
-    end
-
-    subgraph Backend ["💻 Sistema Backend Muses"]
-        D --> I[Calcular nueva alineación de astros en tablero]
-        F --> J[Verificar requisitos de Revolución Solar]
-        H --> K[Verificar requisitos de Revolución Lunar]
-
-        J -- Requisitos OK --> L[Aplicar bonificaciones solares al jugador]
-        J -- Fallo --> M[Devolver error de requisitos no cumplidos]
-
-        K -- Requisitos OK --> N[Aplicar bonificaciones lunares al jugador]
-        K -- Fallo --> M
-
-        I --> O[Reorganizar musas y fichas según nuevo orden astral]
-        L --> O
-        N --> O
-
-        O --> P[Guardar tablero actualizado]
-        P --> Q[Notificar cambios astrales a todos los jugadores]
-    end
-
-    subgraph TableroUI ["🖥️ Vista del Tablero"]
-        M --> B
-        Q --> R(( 🔴 Fin: Mecánica Astral Completada ))
-    end
-```
-
-#### Proceso 3.3: Gestión de Musas y Fichas/Tokens (CU-17, CU-18)
-```mermaid
-flowchart TD
-    subgraph JugadorActivo ["👤 Jugador en Turno Activo"]
-        A(( 🟢 Inicio )) --> B{¿Acción sobre elementos?}
-        
-        B -- Posicionar/Mover Musa --> C[Seleccionar Musa y Astro destino]
-        C --> D[Enviar solicitud para mover musa]
-
-        B -- Colocar/Mover Token --> E[Seleccionar Token y posición]
-        E --> F[Enviar solicitud para colocar token]
-    end
-
-    subgraph Backend ["💻 Sistema Backend Muses"]
-        D --> G{¿Movimiento de musa reglamentario?}
-        G -- No --> H[Devolver error: Movimiento no permitido]
-        G -- Sí --> I[Actualizar ubicación de musa en astro]
-
-        F --> J{¿Token disponible y posición libre?}
-        J -- No --> K[Devolver error: Posición inválida]
-        J -- Sí --> L[Asignar token a astro/jugador]
-
-        I --> M[Actualizar distribución de musas y fichas]
-        L --> M
-        M --> N[Persistir cambios en BD]
-        N --> O[Notificar actualización de elementos a jugadores]
-    end
-
-    subgraph TableroUI ["🖥️ Vista del Tablero"]
-        H --> B
-        K --> B
-        O --> P(( 🔴 Fin: Elementos Actualizados en Tablero ))
-    end
-```
-
-#### Proceso 3.4: Verificación de Victoria y Cierre de Partida (CU-19)
-```mermaid
-flowchart TD
-    subgraph Backend ["💻 Sistema Backend Muses"]
-        A(( 🟢 Tras cada acción/turno )) --> B[Evaluar condición de fin de juego]
-        B --> C{¿Un Jugador cumplió criterio de victoria?}
-        
-        C -- No --> D[Pasar turno al siguiente jugador]
-        D --> E(( 🔴 Continúa el Juego ))
-
-        C -- Sí --> F[Establecer estado de partida: FINALIZADA]
-        F --> G[Determinar jugador ganador]
-        G --> H[Actualizar estadísticas de los jugadores]
-        H --> I[Guardar histórico de partida]
-        I --> J[Notificar fin de partida a jugadores]
-    end
-
     subgraph Jugadores ["👥 Jugadores en Partida"]
-        J --> K[Mostrar pantalla de victoria / resumen de fin de juego]
-        K --> L(( 🔴 Fin de Partida ))
+        A(( 🟢 Inicio de Ronda )) --> B[Consultar estado del tablero y posiciones de Sol y Luna]
+        B --> C[Evaluar cartas en mano]
+        C --> D{¿Qué carta jugar?}
+        
+        D -- Carta de Acción --> E1[Seleccionar Carta de Acción]
+        D -- Carta de Inspiración --> E2{¿Astros en posición requerida y no usada?}
+        E2 -- No --> C
+        E2 -- Sí --> E3[Seleccionar Carta de Inspiración]
+        
+        E1 --> F[Enviar selección secreta de carta]
+        E3 --> F
+    end
+
+    subgraph Backend ["💻 Sistema Backend Muses"]
+        F --> G[Registrar selección del jugador en la ronda]
+        G --> H{¿Todos los jugadores han seleccionado?}
+        H -- No --> I[Esperar selecciones del resto de jugadores]
+        H -- Sí --> J[Revelar cartas seleccionadas]
+        
+        J --> K[Contabilizar votos por tipo de carta y ordenar por mayoría]
+        K --> L[Desempatar mediante jerarquía de prioridad oficial]
+        L --> M[Iterar y ejecutar cartas ordenadas]
+        
+        M --> N{¿Tipo de Carta?}
+        
+        N -- Devoción Sol / Luna --> O1[Colocar 2 tokens de devoción en la Musa del astro correspondiente]
+        N -- Revolución Sol / Luna --> O2[Colocar 1 token en Musa central y rotar cuadrícula de Musas]
+        N -- Inspiración --> O3[Ejecutar efecto de Musa y marcar carta como usada]
+        
+        O1 --> P[Actualizar estado del tablero en BD]
+        O2 --> P
+        O3 --> P
+        P --> Q{¿Se han ejecutado todas las cartas?}
+        Q -- No --> L
+        Q -- Sí --> R[Notificar resolución de cartas y actualización de tablero]
+    end
+
+    subgraph TableroUI ["🖥️ Vista del Tablero"]
+        R --> S(( 🔴 Fin: Acciones de Ronda Resueltas ))
+    end
+```
+
+#### Proceso 3.2: Fin de Ronda y Mantenimiento Astral (CU-02, CU-13, CU-14)
+```mermaid
+flowchart TD
+    subgraph Backend ["💻 Sistema Backend Muses"]
+        A(( 🟢 Tras resolver acciones de ronda )) --> B[Avanzar Sol y Luna 1 posición en sentido horario]
+        B --> D[Incrementar contador de ronda: Ronda = Ronda + 1]
+        D --> E{¿Ronda > 9?}
+        
+        E -- No --> F[Notificar actualización del tablero y abrir nueva ronda]
+        E -- Sí --> G[Establecer estado de partida: FINALIZADA]
+        G --> H[Hacer recuento de puntuación]
+    end
+
+    subgraph Clientes ["👥 Jugadores en Partida"]
+        F --> I(( 🔴 Siguiente Ronda de Selección ))
+        H --> J(( 🔴 Transición a Fin de Partida ))
+    end
+```
+
+#### Proceso 3.3: Recuento de Puntuación y Proclamación de Ganador (CU-15 a CU-19)
+```mermaid
+flowchart TD
+    subgraph Backend ["💻 Sistema Backend Muses"]
+        A(( 🟢 Partida Finalizada )) --> B[Tomar siguiente Musa del tablero]
+        B --> C[Contabilizar tokens de cada jugador en la Musa]
+        C --> D{¿Empate de tokens en algún puesto?}
+        
+        D -- Sí --> E[Aplicar desempate oficial dividiendo y redondeando a la baja]
+        D -- No --> F[Asignar puntos de niveles correspondientes]
+        E --> F
+        
+        F --> G{¿Se han evaluado las 9 Musas?}
+        G -- No --> B
+        G -- Sí --> H[Calcular puntuación total acumulada de cada jugador]
+        
+        H --> I[Identificar jugador o jugadores con máxima puntuación]
+        I --> J[Actualizar estadísticas globales e histórico de partida]
+        J --> K[Notificar resultados finales y ganador]
+    end
+
+    subgraph PantallaFinal ["👥 Pantalla de Fin de Juego"]
+        K --> L[Mostrar podio, desglose detallado por Musas y proclamación de victoria]
+        L --> M(( 🔴 Fin de la Partida ))
     end
 ```
 
 ---
 
-### Módulo 4: Estadísticas, Ranking y Administración (CU-20 a CU-22)
+### Módulo 4: Estadísticas, Ranking y Bot Autómata (CU-20, CU-31, CU-32)
 
-#### Proceso 4.1: Consulta de Estadísticas Personales y Globales (CU-20, CU-21)
+#### Proceso 4.1: Consulta de Estadísticas Personales y Globales (CU-20)
 ```mermaid
 flowchart TD
-    subgraph Usuario ["👤 Jugador / Administrador"]
+    subgraph Usuario ["👤 Jugador Autenticado"]
         A(( 🟢 Inicio )) --> B{¿Qué estadísticas consultar?}
         
         B -- Personales --> C[Solicitar estadísticas personales]
@@ -374,42 +333,21 @@ flowchart TD
     end
 ```
 
-#### Proceso 4.2: Administración de Usuarios y Partidas (CU-22)
+#### Proceso 4.2: Toma de Decisiones y Ejecución del Bot (CU-31, CU-32)
 ```mermaid
 flowchart TD
-    subgraph Admin ["🛡️ Administrador del Sistema"]
-        A(( 🟢 Inicio )) --> B[Acceder al panel de administración]
-        B --> C{¿Operación a realizar?}
-        
-        C -- Listar/Borrar Usuarios --> D[Solicitar gestión de usuarios]
-        C -- Listar/Cancelar Partidas --> E[Solicitar gestión de partidas]
-    end
-
     subgraph Backend ["💻 Sistema Backend Muses"]
-        D --> F{¿Cuenta con permisos de administración?}
-        E --> F
-        
-        F -- No --> G[Devolver error: Sin permisos de administración]
-        F -- Sí --> H{¿Tipo de operación?}
-
-        H -- Eliminar Usuario --> I[Eliminar usuario, estadísticas y sesiones]
-        H -- Cancelar Partida --> J[Forzar cierre de partida y liberar recursos]
-        H -- Consultar Listados --> K[Devolver listados completos de datos]
+        A(( 🟢 Inicio: Turno del Bot )) --> B[Analizar posiciones de Sol y Luna y distribución de tokens]
+        B --> C[Evaluar cartas disponibles en mano del Bot]
+        C --> D[Calcular impacto esperado y seleccionar jugada óptima]
+        D --> E[Registrar selección del Bot en la ronda]
+        E --> F(( 🔴 Fin: Selección del Bot Lista para Resolución ))
     end
 
-    subgraph AdminUI ["🖥️ Panel de Administración"]
-        G --> L[Mostrar error de acceso denegado]
-        I --> M[Actualizar tabla de usuarios]
-        J --> N[Actualizar tabla de partidas]
-        K --> O[Mostrar datos de gestión]
-        M --> P(( 🔴 Fin ))
-        N --> P
-        O --> P
-    end
 ```
 
 ---
 
 ## 4. Conclusión
 
-Este documento proporciona una visión completa e integrada de los **22 Casos de Uso** del sistema **Muses**. Todos los diagramas utilizan un nivel de abstracción conceptual centrado en la lógica de negocio, libre de detalles de implementación de bajo nivel como endpoints de API o códigos HTTP.
+Este documento proporciona una visión completa e integrada de los **Casos de Uso** del sistema **Muses**. Todos los diagramas utilizan un nivel de abstracción conceptual centrado en la lógica de negocio y en las reglas oficiales del juego de mesa, libre de detalles de implementación de bajo nivel como endpoints de API o códigos HTTP.
