@@ -27,15 +27,17 @@ El siguiente cuadro establece las fechas objetivo inicialmente aprobadas:
 | **HITO 5:** Entrega Final              |     20/05/2026 |
 
 **Línea Base Reajustada (Versión 2.0 - 01/06/2026)**
-Debido a los retrasos técnicos y personales acumulados en el primer cuatrimestre del año, se ha reestructurado el cronograma para extender la entrega hasta el 10/10/2026:
+Debido a los retrasos técnicos y personales acumulados en el primer cuatrimestre del año, se ha reestructurado el cronograma adaptándolo al calendario oficial de la convocatoria:
 
-| Hito Principal                         | Fecha Objetivo |
-| :------------------------------------- | -------------: |
-| **HITO 1:** Análisis Completado        |     26/01/2026 |
-| **HITO 2:** Prototipo Funcional (Core) |     30/06/2026 |
-| **HITO 3:** Interfaz de Usuario Final  |     31/07/2026 |
-| **HITO 4:** Fin de Pruebas             |     15/09/2026 |
-| **HITO 5:** Entrega Final              |     10/10/2026 |
+| Hito Principal                                  | Fecha Objetivo |
+| :---------------------------------------------- | -------------: |
+| **HITO 1:** Análisis Completado                 |     26/01/2026 |
+| **HITO 2:** Prototipo Funcional (Core)          |     30/06/2026 |
+| **HITO 3:** Interfaz de Usuario Final           |     31/07/2026 |
+| **HITO 4:** Fin de Pruebas y Modos de Juego     |     15/09/2026 |
+| **HITO 5:** Entrega de la Memoria               |     07/10/2026 |
+| **HITO 6:** Entrega de Diapositivas             |     21/10/2026 |
+| **HITO 7:** Defensa del TFG ante Tribunal       |     26/10/2026 |
 
 ## 1.1 Asignación de Características (Features) a Iteraciones
 
@@ -100,7 +102,7 @@ Se establecen límites de tolerancia para gestionar las variaciones sin necesida
 *   **Registro de Desviaciones:** Si la desviación acumulada amenaza la fecha de un Hito Principal en más de **1 semana**, se registrará la incidencia en el **Devlog (Diario de Proyecto)**, documentando la causa y la decisión tomada (ej. reducir alcance o reajustar tareas futuras)
 
 ## 4. Gestión de Recortes de Alcance (De-scoping)
-Dado que la fecha meta del 10/10/2026 se establece como objetivo prioritario, en caso de desviación crítica se priorizará el ajuste del **alcance** (De-scoping) sobre la extensión del plazo.
+Dado que la fecha de entrega de la memoria del 07/10/2026 y defensa del 26/10/2026 se establecen como objetivos prioritarios, en caso de desviación crítica se priorizará el ajuste del **alcance** (De-scoping) sobre la extensión del plazo.
 
 Si se detecta una falta de tiempo irrecuperable, se procederá al recorte de funcionalidades en el siguiente orden de prioridad (de lo primero en eliminarse a lo último):
 1.  Animaciones y efectos visuales avanzados.
@@ -141,21 +143,24 @@ gantt
     section 1.4 Desarrollo
     Mecánicas del Tablero (I1) :done, d1, 2026-01-29, 2026-02-17
     Mecánicas de Cartas (I2)   :done, d2, 2026-02-18, 2026-05-29
-    Gestión de Partida (I3)    :active, d3, 2026-06-01, 2026-06-30
+    Gestión de Partida (I3)    :done, d3, 2026-06-01, 2026-06-30
     HITO 2 Prototipo Funcional :milestone, m2, 2026-06-30, 0d
-    Interfaz de Usuario (I4)   :ui1, 2026-07-01, 2026-07-31
+    Interfaz de Usuario (I4)   :done, ui1, 2026-07-01, 2026-07-31
     HITO 3 UI Final            :milestone, m3, 2026-07-31, 0d
-    Bots Locales y Online (I5) :modj1, 2026-08-01, 2026-09-15
+    Bots Locales y Online (I5) :done, modj1, 2026-08-01, 2026-09-15
     HITO 4 Fin Pruebas         :milestone, m4, 2026-09-15, 0d
 
     Configuración CI/CD        :done, devops1, 2026-01-26, 5d
-    Despliegue Producción      :devops2, 2026-09-16, 5d
+    Despliegue Producción      :done, devops2, 2026-09-16, 5d
 
     section 1.5 Monitoreo
     Devlog                     :mon1, 2026-01-26, 250d
 
-    section 1.6 Cierre
-    Pruebas Finales            :test1, 2026-09-16, 10d
-    Redacción Memoria          :doc1, 2026-01-26, 2026-10-10
-    HITO 5 Entrega             :milestone, m5, 2026-10-10, 0d
+    section 1.6 Cierre y Defensa
+    Pruebas Finales            :done, test1, 2026-09-16, 10d
+    Redacción y Cierre Memoria :done, doc1, 2026-01-26, 2026-10-07
+    HITO 5 Entrega Memoria     :milestone, m5, 2026-10-07, 0d
+    Entrega Diapositivas       :slide1, 2026-10-08, 2026-10-21
+    HITO 6 Entrega Diapositivas:milestone, m6, 2026-10-21, 0d
+    HITO 7 Defensa TFG         :milestone, m7, 2026-10-26, 0d
 ```
