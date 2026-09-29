@@ -20,7 +20,7 @@ Este sprint se ha centrado en la lógica de las cartas y la gestión de la concu
 ## Problemas encontrados
 
 1. La creación del Dev-Container no funciona en el IDE usado, **Antigravity**. Sí que funciona en VS Code, pero tiene funcionalidades limitadas de IA.
-2. No se apuntó la F01 como issue de Github, por lo que se implementó más tarde.
+2. Se omitió inicialmente la F01 en el desglose preliminar de tareas, por lo que se implementó al final del sprint.
 3. Se empezó varios días más tarde por gestionar las solicitudes para las prácticas curriculares.
 4. Aunque las features se han implementado rápido, la documentación y el registro en la memoria está tomando mucho más tiempo del pensado.
 
