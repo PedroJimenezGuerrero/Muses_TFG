@@ -38,13 +38,13 @@
 
 ## Devlog 6: 26/02/2026
 
-- Se va a trabajar en la Issue 11: Resolver los conflictos de prioridad en las cartas jugadas. Se realizará la acción que más jugadores hayan elegido, y en caso de empate o de que ninguna carta coincida, se aplicará la siguiente prioridad:
+- Se va a trabajar en la Feature F05: Resolver los conflictos de prioridad en las cartas jugadas. Se realizará la acción que más jugadores hayan elegido, y en caso de empate o de que ninguna carta coincida, se aplicará la siguiente prioridad:
   1. Inspiración
   2. Devoción Solar
   3. Revolución Solar
   4. Revolución Lunar
   5. Devoción Lunar
-- Para implementarlo se va a usar un método en JugadorService llamado "jugarCarta" que gestionará el proceso. Por ello hay que trabajar primero en la Issue 10:Seleccionar la carta de acción desde la mano del jugador, para que sirva de base.
+- Para implementarlo se va a usar un método en JugadorService llamado "jugarCarta" que gestionará el proceso. Por ello hay que trabajar primero en la Feature F04: Seleccionar la carta de acción desde la mano del jugador, para que sirva de base.
 
 ## Devlog 7: 28/02/2026
 

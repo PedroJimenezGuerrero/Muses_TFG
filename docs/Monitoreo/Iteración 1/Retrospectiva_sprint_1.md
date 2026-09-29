@@ -11,15 +11,15 @@ También se han creado las clases `Controller`, `Service` y `Repository` para el
 ## Problemas encontrados
 
 1. La creación del Dev-Container no funciona en el IDE usado, **Antigravity**. Sí que funciona en VS Code, pero tiene funcionalidades limitadas de IA.
-1. No se apuntó la Feature#01 como issue de Github, por lo que se implementó más tarde.
-1. Se empezó varios días más tarde por gestionar las solicitudes para las prácticas curriculares.
-1. Aunque las features se han implementado rápido, la documentación y el registro en la memoria está tomando mucho más tiempo del pensado.
+2. Se omitió inicialmente la Feature#01 en el desglose preliminar de tareas, por lo que se implementó al final del sprint.
+3. Se empezó varios días más tarde por gestionar las solicitudes para las prácticas curriculares.
+4. Aunque las features se han implementado rápido, la documentación y el registro en la memoria está tomando mucho más tiempo del pensado.
 
 ## Decisiones de diseño
 
 1. La clase `Musa` ya no guarda la información concreta de cada musa, si no que esa información estática está integrada en el enumerado `TipoMusa`. 
     - Se ha hecho de esta forma para que la información que no cambia (puntos que da cada musa) se mantenga estática en todo momento, y las entidades Musa sólo tengan la información que cambia (los tokens de puntucación que tienen encima). Ver Devlog#03
-1. El método `getMusasEnAstros(Tablero tablero)` devuelve un un diccionario con las claves "sol" y "luna", con sus respectivas musas como valor.
+2. El método `getMusasEnAstros(Tablero tablero)` devuelve un un diccionario con las claves "sol" y "luna", con sus respectivas musas como valor.
     - Si se necesitan ambos valores, no hay que hacer dos llamadas distintas para averiguarlo.
 
 
@@ -30,14 +30,14 @@ También se han creado las clases `Controller`, `Service` y `Repository` para el
 ## Lo que no funciona
 
 1. **Cálculo de tiempos**: Por un lado se ha calculado mal el tiempo que llevaría hace las tareas (aún empezando más tarde, se acabó antes de tiempo), y por otro lo que ha llevado hacer la memoria del sprint 1 ha tomado demasiado tiempo.
-2. **Features faltantes**: No se crearon issues para todas las features de este sprint en un principio (faltaba la Feature#01), por lo que en el talbón del proyecto en Github no aparecía. Esta característica se completó fuera de plazo.
+2. **Planificación de características**: La omisión inicial de la Feature#01 en la lista de tareas del sprint provocó que se completara con desfase temporal.
 
 ## Acciones correctivas
 
 1. Cuando sea necesario el uso de la IA, iniciar el Dev-Container con VS Code y acceder a él en Antigravity.
-2. Escribir todas las issues según aparecen en el diccionario de la EDT al inicio del sprint.
-1. Empezar el día que toca, aunque sea con poca carga de trabajo
-1. Ir escribiendo la memoria conforme se va desarrollando.
+2. Registrar y validar todas las características según aparecen en el diccionario de la EDT al inicio del sprint.
+3. Empezar el día que toca, aunque sea con poca carga de trabajo
+4. Ir escribiendo la memoria conforme se va desarrollando.
 
 
 # Uso de la IA
