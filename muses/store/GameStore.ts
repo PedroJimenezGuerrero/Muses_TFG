@@ -246,18 +246,41 @@ export function buildInitialState(usuario?: Usuario | null): {
     { id: 104, tipoCarta: 'ACCION', tipo: 'REVOLUCION_LUNA', nombre: 'Revolución Lunar' },
   ];
 
-  const inspirationCard: CartaInspiracion = {
-    id: 105,
-    tipoCarta: 'INSPIRACION',
-    nombreMusa: 'TERPSICORE',
-    usada: false,
-    nombre: 'Inspiración de Terpsícore',
+  const defaultMusas: TipoMusa[] = [
+    'TERPSICORE',
+    'CLIO',
+    'TALIA',
+    'EUTERPE',
+    'MELPOMENE',
+    'ERATO',
+    'POLIMNIA',
+    'URANIA',
+    'CALIOPE',
+  ];
+
+  const getInspirationCardForMusa = (musaName: TipoMusa, cardId: number): CartaInspiracion => {
+    const meta = MUSAS_METADATA[musaName] || MUSAS_METADATA.TERPSICORE;
+    return {
+      id: cardId,
+      tipoCarta: 'INSPIRACION',
+      nombreMusa: musaName,
+      usada: false,
+      nombre: `Inspiración de ${meta.displayName}`,
+    };
   };
+
+  const insp1 = getInspirationCardForMusa(defaultMusas[0], 105);
+  const insp2 = getInspirationCardForMusa(defaultMusas[1], 106);
+  const insp3 = getInspirationCardForMusa(defaultMusas[2], 107);
+
+  jugador1.cartaInspiracion = insp1;
+  jugador2.cartaInspiracion = insp2;
+  jugador3.cartaInspiracion = insp3;
 
   return {
     tablero: initialTablero,
     partida: initialPartida,
-    cards: [...commonActions, inspirationCard],
+    cards: [...commonActions, insp1],
   };
 }
 
@@ -507,9 +530,24 @@ export class GameStore {
       if (data.type === 'GAME_START_SYNC' && data.tablero && data.partida) {
         this.tablero = data.tablero;
         this.partida = data.partida;
-        if (data.cards) {
+
+        const commonActions: CartaAccion[] = [
+          { id: 101, tipoCarta: 'ACCION', tipo: 'DEVOCION_SOL', nombre: 'Devoción Solar' },
+          { id: 102, tipoCarta: 'ACCION', tipo: 'DEVOCION_LUNA', nombre: 'Devoción Lunar' },
+          { id: 103, tipoCarta: 'ACCION', tipo: 'REVOLUCION_SOL', nombre: 'Revolución Solar' },
+          { id: 104, tipoCarta: 'ACCION', tipo: 'REVOLUCION_LUNA', nombre: 'Revolución Lunar' },
+        ];
+
+        const myJugador = data.partida.jugadores?.find(
+          (j: Jugador) => (this.usuario && (j.id === this.usuario.id || j.nombre === this.usuario.username))
+        ) || (this.isAnfitrion ? data.partida.jugadores?.[0] : data.partida.jugadores?.[1]) || data.partida.jugadores?.[0];
+
+        if (myJugador?.cartaInspiracion) {
+          this.cards = [...commonActions, myJugador.cartaInspiracion];
+        } else if (data.cards) {
           this.cards = data.cards;
         }
+
         this.enPartida = true;
         this.seleccionesRonda = {};
         this.haSeleccionadoCarta = false;
@@ -795,19 +833,47 @@ export class GameStore {
     this.cards = state.cards;
 
     if (this.sala && this.sala.jugadores && this.sala.jugadores.length > 0) {
-      const roomJugadores: Jugador[] = this.sala.jugadores.map((j, idx) => ({
-        id: j.id || (idx + 1),
-        nombre: j.nombre,
-        numeroJugador: idx + 1,
-        puntuacionTotal: 0,
-        usuario: j.usuario,
-        tokens: Array.from({ length: 20 }, (_, tIdx) => ({
-          id: (idx + 1) * 100 + tIdx,
-          colocado: false,
-          jugador: { id: j.id || (idx + 1), nombre: j.nombre, numeroJugador: idx + 1, puntuacionTotal: 0 },
-        })),
-      }));
+      const shuffledInspirations = [...INITIAL_MUSAS].sort(() => Math.random() - 0.5);
+      const roomJugadores: Jugador[] = this.sala.jugadores.map((j, idx) => {
+        const musaName = shuffledInspirations[idx % shuffledInspirations.length];
+        const meta = MUSAS_METADATA[musaName] || MUSAS_METADATA.TERPSICORE;
+        const inspCard: CartaInspiracion = {
+          id: (idx + 1) * 100 + 50,
+          tipoCarta: 'INSPIRACION',
+          nombreMusa: musaName,
+          usada: false,
+          nombre: `Inspiración de ${meta.displayName}`,
+        };
+        return {
+          id: j.id || (idx + 1),
+          nombre: j.nombre,
+          numeroJugador: idx + 1,
+          puntuacionTotal: 0,
+          usuario: j.usuario,
+          cartaInspiracion: inspCard,
+          tokens: Array.from({ length: 20 }, (_, tIdx) => ({
+            id: (idx + 1) * 100 + tIdx,
+            colocado: false,
+            jugador: { id: j.id || (idx + 1), nombre: j.nombre, numeroJugador: idx + 1, puntuacionTotal: 0 },
+          })),
+        };
+      });
       this.partida.jugadores = roomJugadores;
+
+      const commonActions: CartaAccion[] = [
+        { id: 101, tipoCarta: 'ACCION', tipo: 'DEVOCION_SOL', nombre: 'Devoción Solar' },
+        { id: 102, tipoCarta: 'ACCION', tipo: 'DEVOCION_LUNA', nombre: 'Devoción Lunar' },
+        { id: 103, tipoCarta: 'ACCION', tipo: 'REVOLUCION_SOL', nombre: 'Revolución Solar' },
+        { id: 104, tipoCarta: 'ACCION', tipo: 'REVOLUCION_LUNA', nombre: 'Revolución Lunar' },
+      ];
+
+      const myJugador = roomJugadores.find(
+        (j) => (this.usuario && (j.id === this.usuario.id || j.nombre === this.usuario.username))
+      ) || (this.isAnfitrion ? roomJugadores[0] : roomJugadores[1]) || roomJugadores[0];
+
+      if (myJugador?.cartaInspiracion) {
+        this.cards = [...commonActions, myJugador.cartaInspiracion];
+      }
     }
 
     this.selectedCard = null;
