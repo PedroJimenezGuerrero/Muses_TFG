@@ -115,7 +115,7 @@ export const ActionResolutionStack = observer<ActionResolutionStackProps>(({
 
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs uppercase font-mono font-bold px-3 py-1 rounded-full bg-white/10 text-amber-300 border border-amber-400/40 shadow-sm">
-                    Prioridad {currentAction.prioridad}
+                    Prio {currentAction.prioridad}
                   </span>
                 </div>
               </div>
