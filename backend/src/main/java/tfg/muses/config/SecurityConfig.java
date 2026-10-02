@@ -21,6 +21,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/status").permitAll()
                         .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/salas/**").permitAll()
                         .requestMatchers("/partida/**").permitAll()
                         .requestMatchers("/api/v1/partida/**").permitAll()
                         .requestMatchers("/api/v1/salas/**").permitAll()

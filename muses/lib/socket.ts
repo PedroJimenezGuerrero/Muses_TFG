@@ -15,7 +15,7 @@ export class SocketService {
       return;
     }
 
-    const backendWsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8080/ws';
+    const backendWsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8080/api/v1/ws';
 
     this.client = new Client({
       webSocketFactory: () => new SockJS(backendWsUrl),
