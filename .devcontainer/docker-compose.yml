@@ -3,6 +3,9 @@ services:
     image: mcr.microsoft.com/devcontainers/java:1-21-bookworm
     volumes:
       - ../:/workspaces/Muses_TFG:cached
+    ports:
+      - "8080:8080"
+      - "3000:3000"
 
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
