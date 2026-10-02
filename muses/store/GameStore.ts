@@ -316,7 +316,7 @@ export class GameStore {
 
   async loginUsuario(username: string, password?: string) {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
       const res = await fetch(`${backendUrl}/usuario`);
       if (res.ok) {
         const users: Usuario[] = await res.json();
@@ -351,7 +351,7 @@ export class GameStore {
 
   async registrarUsuario(username: string, email: string, password?: string) {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
       const res = await fetch(`${backendUrl}/usuario`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -453,8 +453,8 @@ export class GameStore {
     };
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-      const res = await fetch(`${backendUrl}/api/v1/salas/crear`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
+      const res = await fetch(`${backendUrl}/salas/crear`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -515,8 +515,8 @@ export class GameStore {
     };
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-      const res = await fetch(`${backendUrl}/api/v1/salas/${cleanCode}/unirse`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
+      const res = await fetch(`${backendUrl}/salas/${cleanCode}/unirse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -610,8 +610,8 @@ export class GameStore {
     if (!this.sala) return;
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-      const res = await fetch(`${backendUrl}/api/v1/salas/${this.sala.codigo}/iniciar`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
+      const res = await fetch(`${backendUrl}/salas/${this.sala.codigo}/iniciar`, {
         method: 'POST',
       });
       if (res.ok) {

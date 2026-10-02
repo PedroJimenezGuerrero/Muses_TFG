@@ -29,7 +29,7 @@ import tfg.muses.jugador.JugadorService;
  * </ul>
  */
 @RestController
-@RequestMapping("/api/v1/salas")
+@RequestMapping("/salas")
 public class SalaController {
 
     @Autowired
