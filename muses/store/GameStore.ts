@@ -54,6 +54,15 @@ export interface PlannedAction {
   rawCard?: AnyCard;
 }
 
+export function safeClone<T>(obj: T): T {
+  if (obj === null || obj === undefined) return obj;
+  try {
+    return JSON.parse(JSON.stringify(toJS(obj)));
+  } catch (e) {
+    return obj;
+  }
+}
+
 function calculateScoreBreakdown(tablero: Tablero, jugadores: Jugador[]): ScoreBreakdown {
   const matrix: ScoreBreakdownMap = {} as any;
   const playerTotals: Record<number, number> = {};
@@ -454,7 +463,7 @@ export class GameStore {
               if (typeof window !== 'undefined') {
                 localStorage.setItem(`muses_room_${codigo}`, JSON.stringify(this.sala));
               }
-              this.lobbyChannel?.postMessage({ type: 'SALA_UPDATE', sala: toJS(this.sala) });
+              this.lobbyChannel?.postMessage({ type: 'SALA_UPDATE', sala: safeClone(this.sala) });
             }
           } else if (type === 'SALA_START' && codigo && this.sala && this.sala.codigo === codigo) {
             this.sala.estado = 'EN_CURSO';
@@ -469,19 +478,24 @@ export class GameStore {
   }
 
   enviarAccionSala(codigo: string, data: any) {
-    socketService.send(`/topic/sala/${codigo}/accion`, data);
-    this.lobbyChannel?.postMessage({
-      type: 'SALA_ACTION',
-      codigo,
-      data: toJS(data),
-    });
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(
-          `muses_action_${codigo}`,
-          JSON.stringify({ ...toJS(data), _ts: Date.now() })
-        );
-      } catch (e) {}
+    try {
+      const cleanData = safeClone(data);
+      socketService.send(`/topic/sala/${codigo}/accion`, cleanData);
+      this.lobbyChannel?.postMessage({
+        type: 'SALA_ACTION',
+        codigo,
+        data: cleanData,
+      });
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(
+            `muses_action_${codigo}`,
+            JSON.stringify({ ...cleanData, _ts: Date.now() })
+          );
+        } catch (e) {}
+      }
+    } catch (err) {
+      console.error('Error in enviarAccionSala:', err);
     }
   }
 
@@ -593,7 +607,7 @@ export class GameStore {
       localStorage.setItem(`muses_room_${randCode}`, JSON.stringify(this.sala));
     }
     if (this.sala) {
-      this.lobbyChannel?.postMessage({ type: 'SALA_UPDATE', sala: toJS(this.sala) });
+      this.lobbyChannel?.postMessage({ type: 'SALA_UPDATE', sala: safeClone(this.sala) });
     }
     this.conectarASalaWS(randCode);
   }
@@ -685,12 +699,12 @@ export class GameStore {
     this.lobbyChannel?.postMessage({
       type: 'SALA_JOIN',
       codigo: cleanCode,
-      jugador: toJS(nuevoJugador),
+      jugador: safeClone(nuevoJugador),
     });
     if (this.sala) {
       this.lobbyChannel?.postMessage({
         type: 'SALA_UPDATE',
-        sala: toJS(this.sala),
+        sala: safeClone(this.sala),
       });
     }
 
@@ -753,9 +767,9 @@ export class GameStore {
     this.enviarAccionSala(this.sala.codigo, {
       type: 'GAME_START_SYNC',
       codigo: this.sala.codigo,
-      tablero: toJS(this.tablero),
-      partida: toJS(this.partida),
-      cards: toJS(this.cards),
+      tablero: safeClone(this.tablero),
+      partida: safeClone(this.partida),
+      cards: safeClone(this.cards),
     });
   }
 
@@ -896,7 +910,7 @@ export class GameStore {
       }
 
       const plannedAction: PlannedAction = {
-        jugador: myJugador,
+        jugador: safeClone(myJugador),
         jugadorId: myJugador.id,
         jugadorNumero: myJugador.numeroJugador,
         jugadorNombre: myJugador.nombre,
@@ -905,7 +919,7 @@ export class GameStore {
         prioridad,
         astroPos,
         musaName,
-        rawCard: card,
+        rawCard: safeClone(card),
       };
 
       runInAction(() => {
@@ -920,7 +934,7 @@ export class GameStore {
       // Broadcast to other players
       this.enviarAccionSala(this.sala!.codigo, {
         type: 'SELECCION_CARTA',
-        payload: plannedAction,
+        payload: safeClone(plannedAction),
       });
 
       // Optional backend REST notification
