@@ -202,7 +202,8 @@ export const GameOverModal = observer<GameOverModalProps>(({
               </thead>
               <tbody className="divide-y divide-white/5">
                 {MUSAS_ORDER.map((musa) => {
-                  const musaBreakdown = breakdown?.[musa] ?? {};
+                  const rawMatrix = (breakdown as any)?.matrix || breakdown || {};
+                  const musaBreakdown = rawMatrix?.[musa] ?? {};
                   // Detect tie across players
                   const playerTokens = jugadores.map((j) => musaBreakdown[j.nombre]?.tokens ?? 0);
                   const maxTokens = Math.max(...playerTokens, 0);

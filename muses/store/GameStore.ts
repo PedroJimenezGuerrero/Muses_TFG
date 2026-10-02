@@ -65,26 +65,42 @@ export function safeClone<T>(obj: T): T {
 
 function calculateScoreBreakdown(tablero: Tablero, jugadores: Jugador[]): ScoreBreakdown {
   const matrix: ScoreBreakdownMap = {} as any;
-  const playerTotals: Record<number, number> = {};
+  const playerTotals: Record<string, number> = {};
   jugadores.forEach((j) => {
-    playerTotals[j.id ?? j.numeroJugador] = 0;
+    playerTotals[j.nombre] = 0;
   });
 
   tablero.grid.forEach((musa) => {
-    const meta = MUSAS_METADATA[musa.nombre];
-    const tokensByPlayer: Record<number, number> = {};
+    const meta = MUSAS_METADATA[musa.nombre] || MUSAS_METADATA.CLIO;
+    const tokensByPlayerName: Record<string, number> = {};
     jugadores.forEach((j) => {
-      tokensByPlayer[j.id ?? j.numeroJugador] = 0;
+      tokensByPlayerName[j.nombre] = 0;
     });
 
-    musa.tokensColocados.forEach((token: any) => {
-      const pid = token.jugador?.id ?? token.jugadorId ?? token.jugador?.numeroJugador ?? token.numeroJugador ?? 1;
-      tokensByPlayer[pid] = (tokensByPlayer[pid] || 0) + 1;
+    (musa.tokensColocados || []).forEach((token: any) => {
+      const tokenPId = token.jugador?.id ?? token.jugadorId;
+      const tokenPNum = token.jugador?.numeroJugador ?? token.numeroJugador;
+      const tokenPName = token.jugador?.nombre;
+
+      const matchedPlayer =
+        jugadores.find((j) =>
+          (tokenPId !== undefined && j.id === tokenPId) ||
+          (tokenPNum !== undefined && j.numeroJugador === tokenPNum) ||
+          (tokenPName !== undefined && j.nombre === tokenPName)
+        ) ||
+        jugadores.find((j) => tokenPNum !== undefined && j.id === tokenPNum) ||
+        jugadores[0];
+
+      if (matchedPlayer) {
+        tokensByPlayerName[matchedPlayer.nombre] =
+          (tokensByPlayerName[matchedPlayer.nombre] || 0) + 1;
+      }
     });
 
-    const entries = Object.entries(tokensByPlayer).map(([pId, count]) => ({
-      playerId: Number(pId),
-      tokens: count,
+    const entries = jugadores.map((j) => ({
+      player: j,
+      nombre: j.nombre,
+      tokens: tokensByPlayerName[j.nombre] || 0,
     }));
 
     entries.sort((a, b) => b.tokens - a.tokens);
@@ -97,10 +113,7 @@ function calculateScoreBreakdown(tablero: Tablero, jugadores: Jugador[]): ScoreB
       const currentTokens = entries[i].tokens;
       if (currentTokens === 0) {
         for (let j = i; j < entries.length; j++) {
-          const p = jugadores.find((pl) => (pl.id ?? pl.numeroJugador) === entries[j].playerId);
-          if (p) {
-            breakdownRow[p.nombre] = { tokens: 0, points: 0 };
-          }
+          breakdownRow[entries[j].nombre] = { tokens: 0, points: 0 };
         }
         break;
       }
@@ -134,15 +147,12 @@ function calculateScoreBreakdown(tablero: Tablero, jugadores: Jugador[]): ScoreB
       }
 
       tiedGroup.forEach((e) => {
-        const p = jugadores.find((pl) => (pl.id ?? pl.numeroJugador) === e.playerId);
-        if (p) {
-          breakdownRow[p.nombre] = {
-            tokens: e.tokens,
-            points: pointsPerPlayer,
-            tieInfo: tieText || undefined,
-          };
-          playerTotals[e.playerId] += pointsPerPlayer;
-        }
+        breakdownRow[e.nombre] = {
+          tokens: e.tokens,
+          points: pointsPerPlayer,
+          tieInfo: tieText || undefined,
+        };
+        playerTotals[e.nombre] = (playerTotals[e.nombre] || 0) + pointsPerPlayer;
       });
 
       rank += countTied;
@@ -155,7 +165,7 @@ function calculateScoreBreakdown(tablero: Tablero, jugadores: Jugador[]): ScoreB
   const totals = jugadores.map((j) => ({
     jugadorId: j.id ?? j.numeroJugador,
     nombre: j.nombre,
-    puntos: playerTotals[j.id ?? j.numeroJugador] || 0,
+    puntos: playerTotals[j.nombre] || 0,
   }));
 
   totals.sort((a, b) => b.puntos - a.puntos);
@@ -163,6 +173,9 @@ function calculateScoreBreakdown(tablero: Tablero, jugadores: Jugador[]): ScoreB
   const winners = totals.filter((t) => t.puntos === maxPts).map((t) => t.nombre);
 
   return {
+    filas: [],
+    totalesPorJugador: [],
+    ganadores: [],
     matrix,
     totals,
     winners,
@@ -189,7 +202,7 @@ export function buildInitialState(usuario?: Usuario | null): {
     grid: initialGrid,
   };
 
-  const currentUsername = usuario?.username || 'Apolo (Tú)';
+  const currentUsername = usuario?.username || 'Apolo';
   const currentUserId = usuario?.id || 1;
 
   const jugador1: Jugador = {
@@ -584,7 +597,7 @@ export class GameStore {
   }
 
   async crearSala(maxJugadores: number = 3) {
-    const currentName = this.usuario?.username || 'Apolo (Tú)';
+    const currentName = this.usuario?.username || 'Apolo';
     const myId = this.usuario?.id || 1;
     this.jugadorActualId = myId;
     this.creeEstaSala = true;
@@ -654,7 +667,7 @@ export class GameStore {
 
   async unirseASala(codigo: string) {
     const cleanCode = codigo.trim().toUpperCase();
-    const currentName = this.usuario?.username || 'Invitado (Tú)';
+    const currentName = this.usuario?.username || 'Invitado';
     const myId = this.usuario?.id || (Date.now() % 100000) + 10;
     this.jugadorActualId = myId;
     this.creeEstaSala = false;
