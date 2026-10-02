@@ -274,6 +274,7 @@ export class GameStore {
   seleccionesRonda: Record<number, PlannedAction> = {};
   haSeleccionadoCarta: boolean = false;
   isResolvingRound: boolean = false;
+  creeEstaSala: boolean = false;
 
   // Auth State
   usuario: Usuario | null = null;
@@ -532,6 +533,7 @@ export class GameStore {
     const currentName = this.usuario?.username || 'Apolo (Tú)';
     const myId = this.usuario?.id || 1;
     this.jugadorActualId = myId;
+    this.creeEstaSala = true;
 
     const host: Jugador = {
       id: myId,
@@ -556,6 +558,10 @@ export class GameStore {
         const salaData: Sala = await res.json();
         runInAction(() => {
           this.sala = salaData;
+          this.creeEstaSala = true;
+          if (salaData.anfitrion?.id) {
+            this.jugadorActualId = salaData.anfitrion.id;
+          }
         });
         this.conectarASalaWS(salaData.codigo);
         return;
@@ -572,6 +578,7 @@ export class GameStore {
     }
 
     runInAction(() => {
+      this.creeEstaSala = true;
       this.sala = {
         id: Date.now(),
         codigo: randCode,
@@ -596,6 +603,7 @@ export class GameStore {
     const currentName = this.usuario?.username || 'Invitado (Tú)';
     const myId = this.usuario?.id || (Date.now() % 100000) + 10;
     this.jugadorActualId = myId;
+    this.creeEstaSala = false;
 
     const nuevoJugador: Jugador = {
       id: myId,
@@ -617,8 +625,13 @@ export class GameStore {
       });
       if (res.ok) {
         const salaData: Sala = await res.json();
+        const joinedPlayer = salaData.jugadores[salaData.jugadores.length - 1];
         runInAction(() => {
           this.sala = salaData;
+          this.creeEstaSala = false;
+          if (joinedPlayer?.id) {
+            this.jugadorActualId = joinedPlayer.id;
+          }
         });
         this.conectarASalaWS(cleanCode);
         return;
@@ -821,8 +834,16 @@ export class GameStore {
 
   get isAnfitrion(): boolean {
     if (!this.sala) return true;
-    if (!this.usuario) return this.sala.anfitrion.id === 999 || this.sala.jugadores[0]?.id === this.jugadorActualId;
-    return this.sala.anfitrion.id === this.usuario.id || this.sala.anfitrion.nombre === this.usuario.username || this.sala.jugadores[0]?.id === this.usuario.id;
+    if (this.creeEstaSala) return true;
+    if (this.usuario && this.sala.anfitrion) {
+      if (this.sala.anfitrion.id === this.usuario.id || this.sala.anfitrion.nombre === this.usuario.username) {
+        return true;
+      }
+    }
+    if (this.sala.anfitrion?.id && this.sala.anfitrion.id === this.jugadorActualId) {
+      return true;
+    }
+    return false;
   }
 
   async executeAction(cardToPlay?: AnyCard) {
