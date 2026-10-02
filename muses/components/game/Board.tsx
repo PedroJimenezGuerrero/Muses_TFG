@@ -1,5 +1,6 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
+import { motion } from 'motion/react';
 import { Tablero, AnyCard, CartaAccion, CartaInspiracion } from '@/types/game';
 import { mapAstroToGrid, REVOLUTION_CYCLES, getInspirationTargetCells } from '@/lib/gameRules';
 import { AstroOrbit } from './AstroOrbit';
@@ -109,17 +110,29 @@ export const Board = observer<BoardProps>(({
             const isReceiving = activeMusaIndex === index;
             const isRevMember = isRevolutionMember ?? (revolutionAnimating && (index === 4 || index === mapAstroToGrid(tablero.solPos) || index === mapAstroToGrid(tablero.lunaPos)));
             return (
-              <MusaCard
-                key={musa.id ?? index}
-                musa={musa}
-                index={index}
-                highlightType={highlightType}
-                isRevolutionMember={isRevMember}
-                isReceivingTokens={isReceiving}
-                isRevolutionAnimating={revolutionAnimating && (isRevolutionMember || index === 4)}
-                tokens={musa.tokensColocados}
-                onClick={() => onCardClick?.(index)}
-              />
+              <motion.div
+                key={musa.nombre}
+                layoutId={`musa-card-${musa.nombre}`}
+                layout
+                transition={{
+                  type: 'spring',
+                  stiffness: 150,
+                  damping: 20,
+                  mass: 0.8,
+                }}
+                className="relative"
+              >
+                <MusaCard
+                  musa={musa}
+                  index={index}
+                  highlightType={highlightType}
+                  isRevolutionMember={isRevMember}
+                  isReceivingTokens={isReceiving}
+                  isRevolutionAnimating={revolutionAnimating && (isRevolutionMember || index === 4)}
+                  tokens={musa.tokensColocados}
+                  onClick={() => onCardClick?.(index)}
+                />
+              </motion.div>
             );
           })}
         </div>

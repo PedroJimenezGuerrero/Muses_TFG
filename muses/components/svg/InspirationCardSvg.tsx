@@ -57,7 +57,7 @@ export const InspirationCardSvg: React.FC<InspirationCardSvgProps> = ({
       viewBox="0 0 240 330"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`select-none rounded-xl overflow-hidden shadow-xl ${isUsada ? 'opacity-50 grayscale' : ''} ${className}`}
+      className={`select-none rounded-xl overflow-hidden shadow-xl ${isUsada ? 'opacity-50' : ''} ${className}`}
       aria-label={`Inspiración de ${meta.displayName}`}
     >
       <defs>

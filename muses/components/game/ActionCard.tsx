@@ -59,7 +59,7 @@ export const ActionCard = observer<ActionCardProps>(({
       onMouseLeave={handleMouseLeave}
       className={`group/card relative flex items-center justify-center w-24 h-40 sm:w-32 sm:h-52 rounded-2xl transition-all duration-300 select-none overflow-visible cursor-pointer shadow-2xl ${
         isDisabled
-          ? 'opacity-40 cursor-not-allowed grayscale'
+          ? 'opacity-50 cursor-not-allowed contrast-90'
           : isSelected
           ? 'ring-4 ring-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.8)] -translate-y-8 z-30'
           : 'hover:-translate-y-8 hover:z-30 hover:ring-2 hover:ring-amber-400/70'

@@ -75,7 +75,7 @@ export const InspirationCard = observer<InspirationCardProps>(({
       onMouseLeave={handleMouseLeave}
       className={`group/card relative flex items-center justify-center w-24 h-40 sm:w-32 sm:h-52 rounded-2xl transition-all duration-300 select-none overflow-visible cursor-pointer shadow-2xl bg-gradient-to-b from-purple-950 via-slate-950 to-black border border-purple-500/50 text-purple-50 ${
         effectiveDisabled
-          ? 'opacity-40 cursor-not-allowed grayscale'
+          ? 'opacity-50 cursor-not-allowed contrast-90'
           : isSelected
           ? 'ring-4 ring-purple-400 shadow-[0_0_30px_rgba(192,132,252,0.8)] -translate-y-8 z-30'
           : 'hover:-translate-y-8 hover:z-30 hover:ring-2 hover:ring-purple-400/70'
