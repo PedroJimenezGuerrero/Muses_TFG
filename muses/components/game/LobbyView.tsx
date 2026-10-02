@@ -20,9 +20,7 @@ export const LobbyView = observer(() => {
 
   // Si ya estamos en una sala creada/unida
   if (store.sala) {
-    const isAnfitrion = store.sala.anfitrion
-      ? store.sala.anfitrion.id === store.jugadorActualId
-      : store.sala.jugadores[0]?.id === store.jugadorActualId;
+    const isAnfitrion = store.isAnfitrion;
 
     return (
       <div className="w-full max-w-xl mx-auto p-6 bg-zinc-900/90 border border-amber-500/30 rounded-3xl shadow-2xl backdrop-blur-xl flex flex-col items-center gap-6">
@@ -52,7 +50,9 @@ export const LobbyView = observer(() => {
 
           <div className="space-y-2">
             {store.sala.jugadores.map((jugador, idx) => {
-              const isMe = jugador.id === store.jugadorActualId;
+              const isMe = isAnfitrion
+                ? idx === 0
+                : (jugador.id === store.jugadorActualId || idx === store.sala!.jugadores.length - 1);
               return (
                 <div
                   key={jugador.id || idx}
