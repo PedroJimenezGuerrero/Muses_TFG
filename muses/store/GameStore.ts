@@ -258,14 +258,15 @@ export class GameStore {
   activeMusaIndex: number | null = null;
   revolutionAnimating: boolean = false;
 
-  
   // Auth State
   usuario: Usuario | null = null;
   isInvitado: boolean = false;
+  private lobbyChannel: BroadcastChannel | null = null;
 
   constructor() {
     makeAutoObservable(this);
     this.cargarUsuarioGuardado();
+    this.initLobbyChannel();
   }
 
   // ─── Auth Actions ───────────────────────────────────────────────────────────
@@ -394,6 +395,45 @@ export class GameStore {
 
   // ─── Room & Multiplayer Actions ─────────────────────────────────────────────
 
+  initLobbyChannel() {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window && !this.lobbyChannel) {
+      this.lobbyChannel = new BroadcastChannel('muses_lobby_channel');
+      this.lobbyChannel.onmessage = (event) => {
+        const { type, sala, codigo, jugador } = event.data || {};
+        runInAction(() => {
+          if (type === 'SALA_UPDATE' && sala && this.sala && this.sala.codigo === sala.codigo) {
+            this.sala = sala;
+            if (sala.estado === 'EN_CURSO' && !this.enPartida) {
+              this.initGame();
+              this.enPartida = true;
+            }
+          } else if (type === 'SALA_JOIN' && codigo && this.sala && this.sala.codigo === codigo && jugador) {
+            const exists = this.sala.jugadores.some(
+              (j) => j.id === jugador.id || j.nombre === jugador.nombre
+            );
+            if (!exists && this.sala.jugadores.length < this.sala.maxJugadores) {
+              const updatedPlayers = [...this.sala.jugadores, jugador];
+              this.sala = {
+                ...this.sala,
+                jugadores: updatedPlayers,
+              };
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(`muses_room_${codigo}`, JSON.stringify(this.sala));
+              }
+              this.lobbyChannel?.postMessage({ type: 'SALA_UPDATE', sala: this.sala });
+            }
+          } else if (type === 'SALA_START' && codigo && this.sala && this.sala.codigo === codigo) {
+            this.sala.estado = 'EN_CURSO';
+            if (!this.enPartida) {
+              this.initGame();
+              this.enPartida = true;
+            }
+          }
+        });
+      };
+    }
+  }
+
   iniciarPartidaContraBots() {
     this.initGame();
     this.enPartida = true;
@@ -414,11 +454,14 @@ export class GameStore {
 
     try {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-      // First ensure Jugador exists on backend if needed
       const res = await fetch(`${backendUrl}/api/v1/salas/crear`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ anfitrionId: myId, maxJugadores }),
+        body: JSON.stringify({ 
+          anfitrionId: this.usuario?.id, 
+          anfitrionNombre: currentName, 
+          maxJugadores 
+        }),
       });
       if (res.ok) {
         const salaData: Sala = await res.json();
@@ -450,13 +493,17 @@ export class GameStore {
       };
     });
 
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`muses_room_${randCode}`, JSON.stringify(this.sala));
+    }
+    this.lobbyChannel?.postMessage({ type: 'SALA_UPDATE', sala: this.sala });
     this.conectarASalaWS(randCode);
   }
 
   async unirseASala(codigo: string) {
     const cleanCode = codigo.trim().toUpperCase();
     const currentName = this.usuario?.username || 'Invitado (Tú)';
-    const myId = this.usuario?.id || Date.now() % 100000;
+    const myId = this.usuario?.id || (Date.now() % 100000) + 10;
     this.jugadorActualId = myId;
 
     const nuevoJugador: Jugador = {
@@ -472,7 +519,10 @@ export class GameStore {
       const res = await fetch(`${backendUrl}/api/v1/salas/${cleanCode}/unirse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jugadorId: myId }),
+        body: JSON.stringify({ 
+          jugadorId: this.usuario?.id, 
+          jugadorNombre: currentName 
+        }),
       });
       if (res.ok) {
         const salaData: Sala = await res.json();
@@ -486,25 +536,63 @@ export class GameStore {
       // Offline fallback
     }
 
-    // Fallback Mock Sala
+    // Fallback Mock Sala con sincronización cruzada
+    let existingRoom: Sala | null = null;
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(`muses_room_${cleanCode}`);
+        if (stored) {
+          existingRoom = JSON.parse(stored);
+        }
+      } catch (e) {}
+    }
+
     runInAction(() => {
-      this.sala = {
-        id: Date.now(),
-        codigo: cleanCode,
-        estado: 'ESPERANDO',
-        maxJugadores: 3,
-        anfitrion: { id: 999, nombre: 'Anfitrión', numeroJugador: 1, puntuacionTotal: 0 },
-        jugadores: [
-          { id: 999, nombre: 'Anfitrión', numeroJugador: 1, puntuacionTotal: 0 },
-          nuevoJugador,
-        ],
-      };
+      if (existingRoom) {
+        const exists = existingRoom.jugadores.some(
+          (j) => j.id === nuevoJugador.id || j.nombre === nuevoJugador.nombre
+        );
+        const updatedPlayers = exists
+          ? existingRoom.jugadores
+          : [...existingRoom.jugadores, { ...nuevoJugador, numeroJugador: existingRoom.jugadores.length + 1 }];
+        this.sala = {
+          ...existingRoom,
+          jugadores: updatedPlayers,
+        };
+      } else {
+        this.sala = {
+          id: Date.now(),
+          codigo: cleanCode,
+          estado: 'ESPERANDO',
+          maxJugadores: 3,
+          anfitrion: { id: 999, nombre: 'Anfitrión', numeroJugador: 1, puntuacionTotal: 0 },
+          jugadores: [
+            { id: 999, nombre: 'Anfitrión', numeroJugador: 1, puntuacionTotal: 0 },
+            nuevoJugador,
+          ],
+        };
+      }
+    });
+
+    if (typeof window !== 'undefined' && this.sala) {
+      localStorage.setItem(`muses_room_${cleanCode}`, JSON.stringify(this.sala));
+    }
+
+    this.lobbyChannel?.postMessage({
+      type: 'SALA_JOIN',
+      codigo: cleanCode,
+      jugador: nuevoJugador,
+    });
+    this.lobbyChannel?.postMessage({
+      type: 'SALA_UPDATE',
+      sala: this.sala,
     });
 
     this.conectarASalaWS(cleanCode);
   }
 
   conectarASalaWS(codigo: string) {
+    this.initLobbyChannel();
     socketService.subscribe(`/topic/sala/${codigo}`, (data: Sala) => {
       runInAction(() => {
         if (data && data.codigo === codigo) {
@@ -543,11 +631,22 @@ export class GameStore {
       this.initGame();
       this.enPartida = true;
     });
+
+    if (typeof window !== 'undefined' && this.sala) {
+      localStorage.setItem(`muses_room_${this.sala.codigo}`, JSON.stringify(this.sala));
+    }
+    this.lobbyChannel?.postMessage({
+      type: 'SALA_START',
+      codigo: this.sala.codigo,
+    });
   }
 
   abandonarSala() {
     if (this.sala?.codigo) {
       socketService.unsubscribe(`/topic/sala/${this.sala.codigo}`);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(`muses_room_${this.sala.codigo}`);
+      }
     }
     this.sala = null;
     this.enPartida = false;
