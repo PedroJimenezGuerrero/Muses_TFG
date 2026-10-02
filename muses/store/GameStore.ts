@@ -278,6 +278,8 @@ export class GameStore {
   actionLogs: ActionResolutionLog[] = [];
   activeMusaIndex: number | null = null;
   revolutionAnimating: boolean = false;
+  currentExecutingAction: PlannedAction | null = null;
+  pendingActions: PlannedAction[] = [];
 
   // Multiplayer Turn Synchronization
   seleccionesRonda: Record<number, PlannedAction> = {};
@@ -818,6 +820,8 @@ export class GameStore {
     this.seleccionesRonda = {};
     this.haSeleccionadoCarta = false;
     this.isResolvingRound = false;
+    this.currentExecutingAction = null;
+    this.pendingActions = [];
   }
 
   resetGame() {
@@ -1073,6 +1077,10 @@ export class GameStore {
 
     const currentCards = [...this.cards];
     const actionsToExecute = [...actions].sort((a, b) => a.prioridad - b.prioridad);
+    runInAction(() => {
+      this.pendingActions = [...actionsToExecute];
+      this.currentExecutingAction = null;
+    });
     const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
     if (isTest) {
@@ -1237,15 +1245,18 @@ export class GameStore {
     const newLogs: ActionResolutionLog[] = [];
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    for (const act of actionsToExecute) {
+    for (let actIdx = 0; actIdx < actionsToExecute.length; actIdx++) {
+      const act = actionsToExecute[actIdx];
       if (!this.tablero) break;
 
       tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0);
 
       runInAction(() => {
+        this.currentExecutingAction = act;
+        this.pendingActions = actionsToExecute.slice(actIdx + 1);
         this.setNotification(`Resolviendo: ${act.jugadorNombre} juega ${act.cartaNombre}...`);
       });
-      await sleep(500);
+      await sleep(600);
 
       if (act.tipoAccion === 'DEVOCION_SOL' || act.tipoAccion === 'DEVOCION_LUNA') {
         const targetIndex = mapAstroToGrid(act.astroPos!);
@@ -1455,6 +1466,8 @@ export class GameStore {
         this.isGameOver = true;
         this.isSubmitting = false;
         this.isResolvingRound = false;
+        this.currentExecutingAction = null;
+        this.pendingActions = [];
         this.activeMusaIndex = null;
         this.revolutionAnimating = false;
         this.setNotification('¡Partida finalizada! Calculando favores de las Musas...');
@@ -1473,6 +1486,8 @@ export class GameStore {
         this.haSeleccionadoCarta = false;
         this.seleccionesRonda = {};
         this.isResolvingRound = false;
+        this.currentExecutingAction = null;
+        this.pendingActions = [];
         this.activeMusaIndex = null;
         this.revolutionAnimating = false;
         this.setNotification(`¡Ronda ${nextRound} iniciada! Elige tu próxima carta.`);

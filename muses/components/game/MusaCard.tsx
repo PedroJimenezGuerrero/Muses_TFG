@@ -59,7 +59,7 @@ export const MusaCard = observer<MusaCardProps>(({
   } else if (isRevolutionMember === true) {
     highlightStyles = 'ring-3 ring-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.75)] z-10';
   } else if (isRevolutionMember === false) {
-    highlightStyles = 'opacity-35 grayscale';
+    highlightStyles = 'opacity-65';
   }
 
   return (

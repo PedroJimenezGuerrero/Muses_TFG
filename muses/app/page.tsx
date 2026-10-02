@@ -7,6 +7,7 @@ import { AnyCard } from '@/types/game';
 import { Board } from '@/components/game/Board';
 import { StatusPanel } from '@/components/game/StatusPanel';
 import { PlayerHand } from '@/components/game/PlayerHand';
+import { ActionResolutionStack } from '@/components/game/ActionResolutionStack';
 import { LobbyView } from '@/components/game/LobbyView';
 import { GameOverModal } from '@/components/game/GameOverModal';
 import { AuthModal, ProfileModal } from '@/components/auth';
@@ -108,10 +109,10 @@ const GamePage = observer(() => {
         {!store.enPartida ? (
           <LobbyView />
         ) : (
-          <div className="w-full h-full flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-10 pb-20 pt-2">
+          <div className="w-full h-full flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-10 pb-28 pt-1">
             {/* Left Side: Game HUD & Players Status */}
             {store.partida && (
-              <aside className="w-full lg:w-64 max-w-xs shrink-0 flex flex-col gap-3 z-20">
+              <aside className="w-full lg:w-64 max-w-xs shrink-0 flex flex-col gap-3 z-20 -translate-y-4 sm:-translate-y-8">
                 <StatusPanel
                   partida={store.partida}
                   isConnected={store.isConnected}
@@ -120,9 +121,16 @@ const GamePage = observer(() => {
               </aside>
             )}
 
-            {/* Center Arena: 3x3 Board with Orbit */}
+            {/* Center Arena: 3x3 Board with Orbit and Action Resolution Stack */}
             {store.tablero && (
-              <section className="flex-1 flex items-center justify-center relative z-10">
+              <section className="flex-1 flex flex-col items-center justify-center relative z-10 -translate-y-8 sm:-translate-y-12">
+                {/* Visual Action Resolution Stack Overlay */}
+                <ActionResolutionStack
+                  currentAction={store.currentExecutingAction}
+                  pendingActions={store.pendingActions}
+                  className="mb-2"
+                />
+
                 <Board
                   tablero={store.tablero}
                   hoveredCard={store.hoveredCard}
@@ -134,7 +142,7 @@ const GamePage = observer(() => {
             )}
 
             {/* Right Side Info: Action Resolution Log & Guide */}
-            <aside className="hidden xl:flex w-64 max-w-xs shrink-0 flex-col gap-3 z-20">
+            <aside className="hidden xl:flex w-64 max-w-xs shrink-0 flex-col gap-3 z-20 -translate-y-4 sm:-translate-y-8">
               {/* Turn Action Resolution Log */}
               {store.actionLogs.length > 0 && (
                 <div className="p-3 rounded-2xl bg-zinc-950/80 border border-amber-500/30 backdrop-blur-md shadow-lg flex flex-col gap-2 animate-in fade-in slide-in-from-right-3 duration-300">
