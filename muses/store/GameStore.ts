@@ -1,4 +1,4 @@
-import { makeAutoObservable, runInAction } from 'mobx';
+import { makeAutoObservable, runInAction, toJS } from 'mobx';
 import {
   Tablero,
   Partida,
@@ -420,7 +420,7 @@ export class GameStore {
               if (typeof window !== 'undefined') {
                 localStorage.setItem(`muses_room_${codigo}`, JSON.stringify(this.sala));
               }
-              this.lobbyChannel?.postMessage({ type: 'SALA_UPDATE', sala: this.sala });
+              this.lobbyChannel?.postMessage({ type: 'SALA_UPDATE', sala: toJS(this.sala) });
             }
           } else if (type === 'SALA_START' && codigo && this.sala && this.sala.codigo === codigo) {
             this.sala.estado = 'EN_CURSO';
@@ -496,7 +496,9 @@ export class GameStore {
     if (typeof window !== 'undefined') {
       localStorage.setItem(`muses_room_${randCode}`, JSON.stringify(this.sala));
     }
-    this.lobbyChannel?.postMessage({ type: 'SALA_UPDATE', sala: this.sala });
+    if (this.sala) {
+      this.lobbyChannel?.postMessage({ type: 'SALA_UPDATE', sala: toJS(this.sala) });
+    }
     this.conectarASalaWS(randCode);
   }
 
@@ -581,12 +583,14 @@ export class GameStore {
     this.lobbyChannel?.postMessage({
       type: 'SALA_JOIN',
       codigo: cleanCode,
-      jugador: nuevoJugador,
+      jugador: toJS(nuevoJugador),
     });
-    this.lobbyChannel?.postMessage({
-      type: 'SALA_UPDATE',
-      sala: this.sala,
-    });
+    if (this.sala) {
+      this.lobbyChannel?.postMessage({
+        type: 'SALA_UPDATE',
+        sala: toJS(this.sala),
+      });
+    }
 
     this.conectarASalaWS(cleanCode);
   }
