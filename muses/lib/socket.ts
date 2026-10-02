@@ -32,8 +32,10 @@ export class SocketService {
         if (onConnect) onConnect();
       },
       onStompError: (frame) => {
-        console.error('STOMP error:', frame.headers['message'], frame.body);
         if (onError) onError(frame);
+      },
+      onWebSocketError: () => {
+        this.connected = false;
       },
       onWebSocketClose: () => {
         this.connected = false;

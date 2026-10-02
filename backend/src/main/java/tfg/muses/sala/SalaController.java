@@ -42,25 +42,50 @@ public class SalaController {
 
     public static class CrearSalaRequest {
         public Long anfitrionId;
+        public String anfitrionNombre;
         public int maxJugadores = 4;
     }
 
     public static class UnirseRequest {
         public Long jugadorId;
+        public String jugadorNombre;
     }
 
     // --- Endpoints ---
 
     @PostMapping("/crear")
     public ResponseEntity<Sala> crear(@RequestBody CrearSalaRequest req) {
-        Jugador anfitrion = jugadorService.getById(req.anfitrionId);
+        Jugador anfitrion = null;
+        if (req.anfitrionId != null) {
+            anfitrion = jugadorService.getById(req.anfitrionId);
+        }
+        if (anfitrion == null) {
+            anfitrion = new Jugador();
+            String nombre = (req.anfitrionNombre != null && !req.anfitrionNombre.isBlank())
+                    ? req.anfitrionNombre : "Anfitrión";
+            anfitrion.setNombre(nombre);
+            anfitrion.setNumeroJugador(1);
+            anfitrion = jugadorService.create(anfitrion);
+        }
         Sala sala = salaService.crearSala(anfitrion, req.maxJugadores);
         return ResponseEntity.ok(sala);
     }
 
     @PostMapping("/{codigo}/unirse")
     public ResponseEntity<Sala> unirse(@PathVariable String codigo, @RequestBody UnirseRequest req) {
-        Jugador jugador = jugadorService.getById(req.jugadorId);
+        Sala salaExistente = salaService.obtenerPorCodigo(codigo);
+        Jugador jugador = null;
+        if (req.jugadorId != null) {
+            jugador = jugadorService.getById(req.jugadorId);
+        }
+        if (jugador == null) {
+            jugador = new Jugador();
+            String nombre = (req.jugadorNombre != null && !req.jugadorNombre.isBlank())
+                    ? req.jugadorNombre : "Invitado";
+            jugador.setNombre(nombre);
+            jugador.setNumeroJugador(salaExistente.getJugadores().size() + 1);
+            jugador = jugadorService.create(jugador);
+        }
         Sala sala = salaService.unirseASala(codigo, jugador);
         return ResponseEntity.ok(sala);
     }
