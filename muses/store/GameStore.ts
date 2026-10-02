@@ -41,6 +41,19 @@ export interface ActionResolutionLog {
   detalle: string;
 }
 
+export interface PlannedAction {
+  jugador: Jugador;
+  jugadorId: number;
+  jugadorNumero: number;
+  jugadorNombre: string;
+  cartaNombre: string;
+  tipoAccion: string;
+  prioridad: number;
+  astroPos?: number;
+  musaName?: TipoMusa;
+  rawCard?: AnyCard;
+}
+
 function calculateScoreBreakdown(tablero: Tablero, jugadores: Jugador[]): ScoreBreakdown {
   const matrix: ScoreBreakdownMap = {} as any;
   const playerTotals: Record<number, number> = {};
@@ -60,127 +73,126 @@ function calculateScoreBreakdown(tablero: Tablero, jugadores: Jugador[]): ScoreB
       tokensByPlayer[pid] = (tokensByPlayer[pid] || 0) + 1;
     });
 
-    // Rank players with > 0 tokens
-    const ranking = Object.entries(tokensByPlayer)
-      .map(([pidStr, count]) => ({ pid: Number(pidStr), count }))
-      .filter((p) => p.count > 0)
-      .sort((a, b) => b.count - a.count);
+    const entries = Object.entries(tokensByPlayer).map(([pId, count]) => ({
+      playerId: Number(pId),
+      tokens: count,
+    }));
 
-    const rowMap: Record<string, { tokens: number; points: number }> = {};
+    entries.sort((a, b) => b.tokens - a.tokens);
 
-    if (ranking.length === 0) {
-      jugadores.forEach((j) => {
-        rowMap[j.nombre] = { tokens: 0, points: 0 };
-      });
-    } else if (ranking.length === 1) {
-      const winner = ranking[0];
-      jugadores.forEach((j) => {
-        const jId = j.id ?? j.numeroJugador;
-        const pts = jId === winner.pid ? meta.nivel1 : 0;
-        rowMap[j.nombre] = { tokens: tokensByPlayer[jId] || 0, points: pts };
-        playerTotals[jId] = (playerTotals[jId] || 0) + pts;
-      });
-    } else {
-      // Handle ties between top players
-      if (ranking[0].count === ranking[1].count) {
-        // 2-way or 3-way tie for 1st
-        const tiedTop = ranking.filter((p) => p.count === ranking[0].count);
-        if (tiedTop.length === 2) {
-          const tiedPoints = Math.floor((meta.nivel1 + meta.nivel2) / 2);
-          const thirdPoints = ranking[2] ? meta.nivel3 : 0;
-          jugadores.forEach((j) => {
-            const jId = j.id ?? j.numeroJugador;
-            let pts = 0;
-            if (tiedTop.some((t) => t.pid === jId)) pts = tiedPoints;
-            else if (ranking[2] && ranking[2].pid === jId) pts = thirdPoints;
-            rowMap[j.nombre] = { tokens: tokensByPlayer[jId] || 0, points: pts };
-            playerTotals[jId] = (playerTotals[jId] || 0) + pts;
-          });
-        } else {
-          // 3+ way tie
-          const tiedPoints = Math.floor((meta.nivel1 + meta.nivel2 + meta.nivel3) / tiedTop.length);
-          jugadores.forEach((j) => {
-            const jId = j.id ?? j.numeroJugador;
-            const pts = tiedTop.some((t) => t.pid === jId) ? tiedPoints : 0;
-            rowMap[j.nombre] = { tokens: tokensByPlayer[jId] || 0, points: pts };
-            playerTotals[jId] = (playerTotals[jId] || 0) + pts;
-          });
+    const breakdownRow: Record<string, { tokens: number; points: number; tieInfo?: string }> = {};
+
+    let rank = 1;
+    let i = 0;
+    while (i < entries.length) {
+      const currentTokens = entries[i].tokens;
+      if (currentTokens === 0) {
+        for (let j = i; j < entries.length; j++) {
+          const p = jugadores.find((pl) => (pl.id ?? pl.numeroJugador) === entries[j].playerId);
+          if (p) {
+            breakdownRow[p.nombre] = { tokens: 0, points: 0 };
+          }
         }
-      } else {
-        // Clear 1st place
-        const firstPid = ranking[0].pid;
-        const firstPts = meta.nivel1;
-        playerTotals[firstPid] = (playerTotals[firstPid] || 0) + firstPts;
+        break;
+      }
 
-        // Check 2nd place tie
-        if (ranking.length >= 3 && ranking[1].count === ranking[2].count) {
-          const tied2nd = ranking.slice(1).filter((p) => p.count === ranking[1].count);
-          const tied2ndPts = Math.floor((meta.nivel2 + meta.nivel3) / tied2nd.length);
-          jugadores.forEach((j) => {
-            const jId = j.id ?? j.numeroJugador;
-            let pts = 0;
-            if (jId === firstPid) pts = firstPts;
-            else if (tied2nd.some((t) => t.pid === jId)) pts = tied2ndPts;
-            rowMap[j.nombre] = { tokens: tokensByPlayer[jId] || 0, points: pts };
-            if (jId !== firstPid) playerTotals[jId] = (playerTotals[jId] || 0) + pts;
-          });
-        } else {
-          // Clear 1st, 2nd, 3rd
-          const secondPid = ranking[1]?.pid;
-          const thirdPid = ranking[2]?.pid;
-          jugadores.forEach((j) => {
-            const jId = j.id ?? j.numeroJugador;
-            let pts = 0;
-            if (jId === firstPid) pts = meta.nivel1;
-            else if (jId === secondPid) pts = meta.nivel2;
-            else if (jId === thirdPid) pts = meta.nivel3;
-            rowMap[j.nombre] = { tokens: tokensByPlayer[jId] || 0, points: pts };
-            if (jId === secondPid) playerTotals[jId] = (playerTotals[jId] || 0) + meta.nivel2;
-            if (jId === thirdPid) playerTotals[jId] = (playerTotals[jId] || 0) + meta.nivel3;
-          });
+      const tiedGroup = entries.filter((e) => e.tokens === currentTokens);
+      const countTied = tiedGroup.length;
+
+      let pointsPerPlayer = 0;
+      let tieText = '';
+
+      if (countTied === 1) {
+        if (rank === 1) pointsPerPlayer = meta.primerPuesto;
+        else if (rank === 2) pointsPerPlayer = meta.segundoPuesto;
+        else if (rank === 3) pointsPerPlayer = meta.tercerPuesto;
+      } else {
+        if (rank === 1) {
+          if (countTied === 2) {
+            pointsPerPlayer = Math.floor((meta.primerPuesto + meta.segundoPuesto) / 2);
+            tieText = `Empate 1º (P1+P2)/2 = ⌊(${meta.primerPuesto}+${meta.segundoPuesto})/2⌋ = ${pointsPerPlayer} pts`;
+          } else {
+            pointsPerPlayer = Math.floor((meta.primerPuesto + meta.segundoPuesto + meta.tercerPuesto) / countTied);
+            tieText = `Empate triple 1º (P1+P2+P3)/${countTied} = ${pointsPerPlayer} pts`;
+          }
+        } else if (rank === 2) {
+          pointsPerPlayer = Math.floor((meta.segundoPuesto + meta.tercerPuesto) / countTied);
+          tieText = `Empate 2º (P2+P3)/${countTied} = ${pointsPerPlayer} pts`;
+        } else if (rank === 3) {
+          pointsPerPlayer = Math.floor(meta.tercerPuesto / countTied);
+          tieText = `Empate 3º P3/${countTied} = ${pointsPerPlayer} pts`;
         }
       }
+
+      tiedGroup.forEach((e) => {
+        const p = jugadores.find((pl) => (pl.id ?? pl.numeroJugador) === e.playerId);
+        if (p) {
+          breakdownRow[p.nombre] = {
+            tokens: e.tokens,
+            points: pointsPerPlayer,
+            tieInfo: tieText || undefined,
+          };
+          playerTotals[e.playerId] += pointsPerPlayer;
+        }
+      });
+
+      rank += countTied;
+      i += countTied;
     }
-    matrix[musa.nombre] = rowMap;
+
+    matrix[musa.nombre] = breakdownRow;
   });
 
+  const totals = jugadores.map((j) => ({
+    jugadorId: j.id ?? j.numeroJugador,
+    nombre: j.nombre,
+    puntos: playerTotals[j.id ?? j.numeroJugador] || 0,
+  }));
+
+  totals.sort((a, b) => b.puntos - a.puntos);
+  const maxPts = totals[0]?.puntos || 0;
+  const winners = totals.filter((t) => t.puntos === maxPts).map((t) => t.nombre);
+
   return {
-    filas: [],
-    totalesPorJugador: [],
-    ganadores: [],
     matrix,
+    totals,
+    winners,
   };
 }
 
-function buildInitialState(customUser?: Usuario | null): {
+export function buildInitialState(usuario?: Usuario | null): {
   tablero: Tablero;
   partida: Partida;
   cards: (CartaAccion | CartaInspiracion)[];
 } {
-  const grid = INITIAL_MUSAS.map((nombre, i) => ({
-    id: i + 1,
+  const musas = [...INITIAL_MUSAS];
+  const initialGrid = musas.map((nombre, index) => ({
+    id: index + 1,
     nombre,
     tokensColocados: [],
+    posicion: index,
   }));
 
   const initialTablero: Tablero = {
     id: 1,
     solPos: 0,
     lunaPos: 4,
-    grid,
+    grid: initialGrid,
   };
 
-  const playerName = customUser?.username ? `${customUser.username} (Tú)` : 'Apolo (Tú)';
+  const currentUsername = usuario?.username || 'Apolo (Tú)';
+  const currentUserId = usuario?.id || 1;
 
   const jugador1: Jugador = {
-    id: 1,
-    nombre: playerName,
+    id: currentUserId,
+    nombre: currentUsername,
     numeroJugador: 1,
     puntuacionTotal: 0,
+    usuario: usuario || undefined,
     tokens: Array.from({ length: 20 }, (_, idx) => ({
       id: 100 + idx,
       colocado: false,
-      jugador: { id: 1, nombre: playerName, numeroJugador: 1, puntuacionTotal: 0 },
+      jugador: { id: currentUserId, nombre: currentUsername, numeroJugador: 1, puntuacionTotal: 0 },
     })),
   };
 
@@ -258,6 +270,11 @@ export class GameStore {
   activeMusaIndex: number | null = null;
   revolutionAnimating: boolean = false;
 
+  // Multiplayer Turn Synchronization
+  seleccionesRonda: Record<number, PlannedAction> = {};
+  haSeleccionadoCarta: boolean = false;
+  isResolvingRound: boolean = false;
+
   // Auth State
   usuario: Usuario | null = null;
   isInvitado: boolean = false;
@@ -267,6 +284,7 @@ export class GameStore {
     makeAutoObservable(this);
     this.cargarUsuarioGuardado();
     this.initLobbyChannel();
+    this.initStorageListener();
   }
 
   // ─── Auth Actions ───────────────────────────────────────────────────────────
@@ -395,13 +413,28 @@ export class GameStore {
 
   // ─── Room & Multiplayer Actions ─────────────────────────────────────────────
 
+  initStorageListener() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', (e) => {
+        if (this.sala && e.key === `muses_action_${this.sala.codigo}` && e.newValue) {
+          try {
+            const parsed = JSON.parse(e.newValue);
+            this.procesarAccionSala(parsed);
+          } catch (err) {}
+        }
+      });
+    }
+  }
+
   initLobbyChannel() {
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window && !this.lobbyChannel) {
       this.lobbyChannel = new BroadcastChannel('muses_lobby_channel');
       this.lobbyChannel.onmessage = (event) => {
-        const { type, sala, codigo, jugador } = event.data || {};
+        const { type, sala, codigo, jugador, data } = event.data || {};
         runInAction(() => {
-          if (type === 'SALA_UPDATE' && sala && this.sala && this.sala.codigo === sala.codigo) {
+          if (type === 'SALA_ACTION' && codigo && this.sala && this.sala.codigo === codigo && data) {
+            this.procesarAccionSala(data);
+          } else if (type === 'SALA_UPDATE' && sala && this.sala && this.sala.codigo === sala.codigo) {
             this.sala = sala;
             if (sala.estado === 'EN_CURSO' && !this.enPartida) {
               this.initGame();
@@ -432,6 +465,62 @@ export class GameStore {
         });
       };
     }
+  }
+
+  enviarAccionSala(codigo: string, data: any) {
+    socketService.send(`/topic/sala/${codigo}/accion`, data);
+    this.lobbyChannel?.postMessage({
+      type: 'SALA_ACTION',
+      codigo,
+      data: toJS(data),
+    });
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          `muses_action_${codigo}`,
+          JSON.stringify({ ...toJS(data), _ts: Date.now() })
+        );
+      } catch (e) {}
+    }
+  }
+
+  procesarAccionSala(data: any) {
+    if (!data) return;
+    runInAction(() => {
+      if (data.type === 'GAME_START_SYNC' && data.tablero && data.partida) {
+        this.tablero = data.tablero;
+        this.partida = data.partida;
+        if (data.cards) {
+          this.cards = data.cards;
+        }
+        this.enPartida = true;
+        this.seleccionesRonda = {};
+        this.haSeleccionadoCarta = false;
+        this.isResolvingRound = false;
+        this.isSubmitting = false;
+        this.setNotification('¡Partida iniciada! Selecciona tu carta para la ronda 1.');
+      } else if (data.type === 'SELECCION_CARTA' && data.payload) {
+        const act: PlannedAction = data.payload;
+        this.seleccionesRonda = {
+          ...this.seleccionesRonda,
+          [act.jugadorId]: act,
+        };
+
+        const totalEsperados = this.partida?.jugadores.length || this.sala?.jugadores.length || 2;
+        const totalSeleccionados = Object.keys(this.seleccionesRonda).length;
+
+        if (totalSeleccionados < totalEsperados) {
+          if (this.haSeleccionadoCarta) {
+            this.setNotification(`Has seleccionado tu carta. Esperando a los demás jugadores... (${totalSeleccionados} / ${totalEsperados})`);
+          } else {
+            this.setNotification(`${act.jugadorNombre} ha seleccionado su carta. (${totalSeleccionados} / ${totalEsperados})`);
+          }
+        } else {
+          // All players selected!
+          this.ejecutarResolucionRonda(Object.values(this.seleccionesRonda));
+        }
+      }
+    });
   }
 
   iniciarPartidaContraBots() {
@@ -608,6 +697,10 @@ export class GameStore {
         }
       });
     });
+
+    socketService.subscribe(`/topic/sala/${codigo}/accion`, (data: any) => {
+      this.procesarAccionSala(data);
+    });
   }
 
   async iniciarPartidaDesdeSala() {
@@ -643,11 +736,20 @@ export class GameStore {
       type: 'SALA_START',
       codigo: this.sala.codigo,
     });
+
+    this.enviarAccionSala(this.sala.codigo, {
+      type: 'GAME_START_SYNC',
+      codigo: this.sala.codigo,
+      tablero: toJS(this.tablero),
+      partida: toJS(this.partida),
+      cards: toJS(this.cards),
+    });
   }
 
   abandonarSala() {
     if (this.sala?.codigo) {
       socketService.unsubscribe(`/topic/sala/${this.sala.codigo}`);
+      socketService.unsubscribe(`/topic/sala/${this.sala.codigo}/accion`);
       if (typeof window !== 'undefined') {
         localStorage.removeItem(`muses_room_${this.sala.codigo}`);
       }
@@ -662,6 +764,23 @@ export class GameStore {
     this.tablero = state.tablero;
     this.partida = state.partida;
     this.cards = state.cards;
+
+    if (this.sala && this.sala.jugadores && this.sala.jugadores.length > 0) {
+      const roomJugadores: Jugador[] = this.sala.jugadores.map((j, idx) => ({
+        id: j.id || (idx + 1),
+        nombre: j.nombre,
+        numeroJugador: idx + 1,
+        puntuacionTotal: 0,
+        usuario: j.usuario,
+        tokens: Array.from({ length: 20 }, (_, tIdx) => ({
+          id: (idx + 1) * 100 + tIdx,
+          colocado: false,
+          jugador: { id: j.id || (idx + 1), nombre: j.nombre, numeroJugador: idx + 1, puntuacionTotal: 0 },
+        })),
+      }));
+      this.partida.jugadores = roomJugadores;
+    }
+
     this.selectedCard = null;
     this.hoveredCard = null;
     this.isSubmitting = false;
@@ -669,6 +788,9 @@ export class GameStore {
     this.scoreBreakdown = null;
     this.actionLogs = [];
     this.notification = null;
+    this.seleccionesRonda = {};
+    this.haSeleccionadoCarta = false;
+    this.isResolvingRound = false;
   }
 
   resetGame() {
@@ -697,46 +819,121 @@ export class GameStore {
     this.isConnected = val;
   }
 
+  get isAnfitrion(): boolean {
+    if (!this.sala) return true;
+    if (!this.usuario) return this.sala.anfitrion.id === 999 || this.sala.jugadores[0]?.id === this.jugadorActualId;
+    return this.sala.anfitrion.id === this.usuario.id || this.sala.anfitrion.nombre === this.usuario.username || this.sala.jugadores[0]?.id === this.usuario.id;
+  }
+
   async executeAction(cardToPlay?: AnyCard) {
     const card = cardToPlay || this.selectedCard;
     if (!card || this.isSubmitting || !this.tablero || !this.partida) return;
 
-    runInAction(() => {
-      this.isSubmitting = true;
-      this.actionLogs = [];
-      this.activeMusaIndex = null;
-      this.revolutionAnimating = false;
-      this.setNotification(`Resolviendo acciones de la ronda...`);
-    });
-
     const currentTablero = this.tablero;
     const currentPartida = this.partida;
-    const currentCards = [...this.cards];
+    const cardType = (card as any).tipo || (card as any).tipoCarta;
+
+    // Detect if we are in a multiplayer room with other players
+    const isMultiplayerRoom = !!(this.sala && this.sala.jugadores && this.sala.jugadores.length > 1);
+
+    if (isMultiplayerRoom) {
+      const myJugador = currentPartida.jugadores.find(
+        (j) => (this.usuario && (j.id === this.usuario.id || j.nombre === this.usuario.username))
+      ) || (this.isAnfitrion ? currentPartida.jugadores[0] : currentPartida.jugadores[1]) || currentPartida.jugadores[0];
+
+      let cartaNombre = 'Carta';
+      let tipoAccion = 'DEVOCION_SOL';
+      let prioridad = 2;
+      let astroPos = currentTablero.solPos;
+      let musaName: TipoMusa | undefined = undefined;
+
+      if (cardType === 'DEVOCION_SOL') {
+        cartaNombre = 'Devoción Solar';
+        tipoAccion = 'DEVOCION_SOL';
+        prioridad = 2;
+        astroPos = currentTablero.solPos;
+      } else if (cardType === 'DEVOCION_LUNA') {
+        cartaNombre = 'Devoción Lunar';
+        tipoAccion = 'DEVOCION_LUNA';
+        prioridad = 5;
+        astroPos = currentTablero.lunaPos;
+      } else if (cardType === 'REVOLUCION_SOL') {
+        cartaNombre = 'Revolución Solar';
+        tipoAccion = 'REVOLUCION_SOL';
+        prioridad = 3;
+        astroPos = currentTablero.solPos;
+      } else if (cardType === 'REVOLUCION_LUNA') {
+        cartaNombre = 'Revolución Lunar';
+        tipoAccion = 'REVOLUCION_LUNA';
+        prioridad = 4;
+        astroPos = currentTablero.lunaPos;
+      } else if (cardType === 'INSPIRACION' || (card as any).tipoMusa || (card as any).nombreMusa) {
+        musaName = ((card as any).tipoMusa || (card as any).nombreMusa) as TipoMusa;
+        cartaNombre = `Inspiración (${musaName})`;
+        tipoAccion = 'INSPIRACION';
+        prioridad = 1;
+      }
+
+      const plannedAction: PlannedAction = {
+        jugador: myJugador,
+        jugadorId: myJugador.id,
+        jugadorNumero: myJugador.numeroJugador,
+        jugadorNombre: myJugador.nombre,
+        cartaNombre,
+        tipoAccion,
+        prioridad,
+        astroPos,
+        musaName,
+        rawCard: card,
+      };
+
+      runInAction(() => {
+        this.haSeleccionadoCarta = true;
+        this.isSubmitting = true;
+        this.seleccionesRonda = {
+          ...this.seleccionesRonda,
+          [myJugador.id]: plannedAction,
+        };
+      });
+
+      // Broadcast to other players
+      this.enviarAccionSala(this.sala!.codigo, {
+        type: 'SELECCION_CARTA',
+        payload: plannedAction,
+      });
+
+      // Optional backend REST notification
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
+        fetch(`${backendUrl}/partida/${currentPartida.id}/seleccionar-carta?jugadorId=${myJugador.id}&cartaId=${card.id}`, {
+          method: 'POST'
+        }).catch(() => {});
+      } catch (e) {}
+
+      const totalEsperados = currentPartida.jugadores.length;
+      const totalSeleccionados = Object.keys(this.seleccionesRonda).length;
+
+      if (totalSeleccionados < totalEsperados) {
+        this.setNotification(`Has seleccionado ${cartaNombre}. Esperando a los demás jugadores... (${totalSeleccionados} / ${totalEsperados})`);
+      } else {
+        this.ejecutarResolucionRonda(Object.values(this.seleccionesRonda));
+      }
+      return;
+    }
+
+    // --- Single player against bots (offline / fallback) ---
     const activePlayer = currentPartida.jugadores[0]; // Active player
     const bot1 = currentPartida.jugadores[1]; // Atenea
     const bot2 = currentPartida.jugadores[2]; // Hermes
 
-    const cardType = (card as any).tipo || (card as any).tipoCarta;
-
-    // Define the actions played in this round
-    interface PlannedAction {
-      jugador: Jugador;
-      jugadorNumero: number;
-      cartaNombre: string;
-      tipoAccion: string;
-      prioridad: number;
-      astroPos?: number;
-      musaName?: TipoMusa;
-      rawCard?: AnyCard;
-    }
-
     const actionsToExecute: PlannedAction[] = [];
 
-    // 1. Player's planned action
     if (cardType === 'DEVOCION_SOL') {
       actionsToExecute.push({
         jugador: activePlayer,
+        jugadorId: activePlayer.id,
         jugadorNumero: 1,
+        jugadorNombre: activePlayer.nombre,
         cartaNombre: 'Devoción Solar',
         tipoAccion: 'DEVOCION_SOL',
         prioridad: 2,
@@ -745,7 +942,9 @@ export class GameStore {
     } else if (cardType === 'DEVOCION_LUNA') {
       actionsToExecute.push({
         jugador: activePlayer,
+        jugadorId: activePlayer.id,
         jugadorNumero: 1,
+        jugadorNombre: activePlayer.nombre,
         cartaNombre: 'Devoción Lunar',
         tipoAccion: 'DEVOCION_LUNA',
         prioridad: 5,
@@ -754,7 +953,9 @@ export class GameStore {
     } else if (cardType === 'REVOLUCION_SOL') {
       actionsToExecute.push({
         jugador: activePlayer,
+        jugadorId: activePlayer.id,
         jugadorNumero: 1,
+        jugadorNombre: activePlayer.nombre,
         cartaNombre: 'Revolución Solar',
         tipoAccion: 'REVOLUCION_SOL',
         prioridad: 3,
@@ -763,7 +964,9 @@ export class GameStore {
     } else if (cardType === 'REVOLUCION_LUNA') {
       actionsToExecute.push({
         jugador: activePlayer,
+        jugadorId: activePlayer.id,
         jugadorNumero: 1,
+        jugadorNombre: activePlayer.nombre,
         cartaNombre: 'Revolución Lunar',
         tipoAccion: 'REVOLUCION_LUNA',
         prioridad: 4,
@@ -773,7 +976,9 @@ export class GameStore {
       const musaName = ((card as any).tipoMusa || (card as any).nombreMusa) as TipoMusa;
       actionsToExecute.push({
         jugador: activePlayer,
+        jugadorId: activePlayer.id,
         jugadorNumero: 1,
+        jugadorNombre: activePlayer.nombre,
         cartaNombre: `Inspiración (${musaName})`,
         tipoAccion: 'INSPIRACION',
         prioridad: 1,
@@ -782,11 +987,12 @@ export class GameStore {
       });
     }
 
-    // 2. Bot 1 (Atenea) plays Devoción Lunar
     if (bot1) {
       actionsToExecute.push({
         jugador: bot1,
+        jugadorId: bot1.id,
         jugadorNumero: 2,
+        jugadorNombre: bot1.nombre,
         cartaNombre: 'Devoción Lunar',
         tipoAccion: 'DEVOCION_LUNA',
         prioridad: 5,
@@ -794,11 +1000,12 @@ export class GameStore {
       });
     }
 
-    // 3. Bot 2 (Hermes) plays Revolución Lunar
     if (bot2) {
       actionsToExecute.push({
         jugador: bot2,
+        jugadorId: bot2.id,
         jugadorNumero: 3,
+        jugadorNombre: bot2.nombre,
         cartaNombre: 'Revolución Lunar',
         tipoAccion: 'REVOLUCION_LUNA',
         prioridad: 4,
@@ -806,36 +1013,59 @@ export class GameStore {
       });
     }
 
-    // Sort strictly by official priority (1 = Inspiración, 2 = Devoción Sol, 3 = Rev Sol, 4 = Rev Luna, 5 = Dev Luna)
-    actionsToExecute.sort((a, b) => a.prioridad - b.prioridad);
+    this.ejecutarResolucionRonda(actionsToExecute);
+  }
 
+  async ejecutarResolucionRonda(actions: PlannedAction[]) {
+    if (this.isResolvingRound) return;
+    this.isResolvingRound = true;
+
+    runInAction(() => {
+      this.isSubmitting = true;
+      this.actionLogs = [];
+      this.activeMusaIndex = null;
+      this.revolutionAnimating = false;
+      this.setNotification('¡Todos han elegido! Resolviendo acciones de la ronda...');
+    });
+
+    const currentTablero = this.tablero;
+    const currentPartida = this.partida;
+    if (!currentTablero || !currentPartida) {
+      this.isResolvingRound = false;
+      this.isSubmitting = false;
+      return;
+    }
+
+    const currentCards = [...this.cards];
+    const actionsToExecute = [...actions].sort((a, b) => a.prioridad - b.prioridad);
     const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
-    // In test environment, execute all steps within a single 600ms timer for fake-timer compatibility
     if (isTest) {
       setTimeout(() => {
         runInAction(() => {
           if (!this.tablero || !this.partida) return;
 
           let updatedGrid = [...this.tablero.grid];
-          let pTokensDeduct = 0;
+          const tokensDeductMap: Record<number, number> = {};
           const newLogs: ActionResolutionLog[] = [];
 
           for (const act of actionsToExecute) {
+            tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0);
+
             if (act.tipoAccion === 'DEVOCION_SOL' || act.tipoAccion === 'DEVOCION_LUNA') {
               const targetIndex = mapAstroToGrid(act.astroPos!);
-              if (act.jugadorNumero === 1) pTokensDeduct += 2;
+              tokensDeductMap[act.jugadorId] += 2;
               const newTokens = Array.from({ length: 2 }, (_, i) => ({
                 id: Date.now() + i,
                 colocado: true,
                 jugador: act.jugador,
-                jugadorId: act.jugador.id,
+                jugadorId: act.jugadorId,
               }));
               updatedGrid = updatedGrid.map((m, idx) =>
                 idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] } : m
               );
               newLogs.push({
-                jugadorNombre: act.jugador.nombre,
+                jugadorNombre: act.jugadorNombre,
                 jugadorNumero: act.jugadorNumero,
                 cartaNombre: act.cartaNombre,
                 tipoAccion: act.tipoAccion,
@@ -843,39 +1073,39 @@ export class GameStore {
                 detalle: `Coloca 2 fichas en ${updatedGrid[targetIndex].nombre}`,
               });
             } else if (act.tipoAccion === 'REVOLUCION_SOL' || act.tipoAccion === 'REVOLUCION_LUNA') {
-              if (act.jugadorNumero === 1) pTokensDeduct += 1;
+              tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + 1;
               const newToken = {
                 id: Date.now(),
                 colocado: true,
                 jugador: act.jugador,
-                jugadorId: act.jugador.id,
+                jugadorId: act.jugadorId,
               };
               updatedGrid = updatedGrid.map((m, idx) =>
                 idx === 4 ? { ...m, tokensColocados: [...m.tokensColocados, newToken] } : m
               );
-              if (act.jugadorNumero === 1) {
+              if (act.jugadorNumero === 1 || this.sala) {
                 updatedGrid = applyRevolution(updatedGrid, act.astroPos!);
               }
               newLogs.push({
-                jugadorNombre: act.jugador.nombre,
+                jugadorNombre: act.jugadorNombre,
                 jugadorNumero: act.jugadorNumero,
                 cartaNombre: act.cartaNombre,
                 tipoAccion: act.tipoAccion,
                 prioridad: act.prioridad,
-                detalle: act.jugadorNumero === 1
+                detalle: (act.jugadorNumero === 1 || this.sala)
                   ? `Coloca 1 ficha al centro y rota el semiciclo ${act.tipoAccion === 'REVOLUCION_SOL' ? 'solar' : 'lunar'}`
                   : `Coloca 1 ficha al centro`,
               });
             } else if (act.tipoAccion === 'INSPIRACION') {
               const musaName = act.musaName!;
               const targetCells = getInspirationTargetCells(musaName, currentTablero.solPos);
-              pTokensDeduct += targetCells.length * 2;
+              tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + targetCells.length * 2;
               targetCells.forEach((targetIndex) => {
                 const newTokens = Array.from({ length: 2 }, (_, i) => ({
                   id: Date.now() + targetIndex * 10 + i,
                   colocado: true,
                   jugador: act.jugador,
-                  jugadorId: act.jugador.id,
+                  jugadorId: act.jugadorId,
                 }));
                 updatedGrid = updatedGrid.map((m, idx) =>
                   idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] } : m
@@ -887,7 +1117,7 @@ export class GameStore {
                 this.cards = currentCards;
               }
               newLogs.push({
-                jugadorNombre: act.jugador.nombre,
+                jugadorNombre: act.jugadorNombre,
                 jugadorNumero: act.jugadorNumero,
                 cartaNombre: act.cartaNombre,
                 tipoAccion: 'INSPIRACION',
@@ -902,10 +1132,12 @@ export class GameStore {
             this.tablero.lunaPos
           );
 
-          const updatedJugadores = currentPartida.jugadores.map((j, i) => {
-            if (i === 0 && j.tokens) return { ...j, tokens: j.tokens.slice(pTokensDeduct) };
-            if (i === 1 && j.tokens) return { ...j, tokens: j.tokens.slice(2) };
-            if (i === 2 && j.tokens) return { ...j, tokens: j.tokens.slice(1) };
+          const updatedJugadores = currentPartida.jugadores.map((j) => {
+            const deduct = tokensDeductMap[j.id] || (j.numeroJugador === 1 ? (tokensDeductMap[1] || 0) : 0);
+            if (j.numeroJugador === 1 && j.tokens && deduct > 0) return { ...j, tokens: j.tokens.slice(deduct) };
+            if (j.numeroJugador === 2 && j.tokens) return { ...j, tokens: j.tokens.slice(2) };
+            if (j.numeroJugador === 3 && j.tokens) return { ...j, tokens: j.tokens.slice(1) };
+            if (j.tokens && deduct > 0) return { ...j, tokens: j.tokens.slice(deduct) };
             return j;
           });
 
@@ -942,6 +1174,7 @@ export class GameStore {
             this.scoreBreakdown = breakdown;
             this.isGameOver = true;
             this.isSubmitting = false;
+            this.isResolvingRound = false;
             this.setNotification('¡Partida finalizada! Calculando favores de las Musas...');
           } else {
             const nextRound = currentRound + 1;
@@ -954,6 +1187,9 @@ export class GameStore {
             this.selectedCard = null;
             this.hoveredCard = null;
             this.isSubmitting = false;
+            this.haSeleccionadoCarta = false;
+            this.seleccionesRonda = {};
+            this.isResolvingRound = false;
             this.setNotification('Ronda resuelta. Los astros avanzan.');
           }
         });
@@ -961,29 +1197,30 @@ export class GameStore {
       return;
     }
 
-    let pTokensDeduct = 0;
+    // Interactive Browser Animation Sequence
+    const tokensDeductMap: Record<number, number> = {};
     const newLogs: ActionResolutionLog[] = [];
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    // Execute actions sequentially one-by-one with visual animations
     for (const act of actionsToExecute) {
       if (!this.tablero) break;
 
+      tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0);
+
       runInAction(() => {
-        this.setNotification(`Resolviendo: ${act.jugador.nombre} juega ${act.cartaNombre}...`);
+        this.setNotification(`Resolviendo: ${act.jugadorNombre} juega ${act.cartaNombre}...`);
       });
       await sleep(500);
 
       if (act.tipoAccion === 'DEVOCION_SOL' || act.tipoAccion === 'DEVOCION_LUNA') {
         const targetIndex = mapAstroToGrid(act.astroPos!);
-        const isPlayer = act.jugadorNumero === 1;
-        if (isPlayer) pTokensDeduct += 2;
+        tokensDeductMap[act.jugadorId] += 2;
 
         const newTokens = Array.from({ length: 2 }, (_, i) => ({
           id: Date.now() + Math.random() * 1000 + i,
           colocado: true,
           jugador: act.jugador,
-          jugadorId: act.jugador.id,
+          jugadorId: act.jugadorId,
         }));
 
         runInAction(() => {
@@ -997,7 +1234,7 @@ export class GameStore {
             ),
           };
           const logEntry: ActionResolutionLog = {
-            jugadorNombre: act.jugador.nombre,
+            jugadorNombre: act.jugadorNombre,
             jugadorNumero: act.jugadorNumero,
             cartaNombre: act.cartaNombre,
             tipoAccion: act.tipoAccion,
@@ -1013,14 +1250,13 @@ export class GameStore {
           this.activeMusaIndex = null;
         });
       } else if (act.tipoAccion === 'REVOLUCION_SOL' || act.tipoAccion === 'REVOLUCION_LUNA') {
-        const isPlayer = act.jugadorNumero === 1;
-        if (isPlayer) pTokensDeduct += 1;
+        tokensDeductMap[act.jugadorId] += 1;
 
         const newToken = {
           id: Date.now() + Math.random() * 1000,
           colocado: true,
           jugador: act.jugador,
-          jugadorId: act.jugador.id,
+          jugadorId: act.jugadorId,
         };
 
         // Step A: place token at center
@@ -1037,8 +1273,8 @@ export class GameStore {
 
         await sleep(600);
 
-        // Step B: rotate grid in revolution if player played it
-        if (act.jugadorNumero === 1) {
+        // Step B: rotate grid in revolution
+        if (act.jugadorNumero === 1 || this.sala) {
           runInAction(() => {
             if (!this.tablero) return;
             this.revolutionAnimating = true;
@@ -1047,7 +1283,7 @@ export class GameStore {
               grid: applyRevolution(this.tablero.grid, act.astroPos!),
             };
             const logEntry: ActionResolutionLog = {
-              jugadorNombre: act.jugador.nombre,
+              jugadorNombre: act.jugadorNombre,
               jugadorNumero: act.jugadorNumero,
               cartaNombre: act.cartaNombre,
               tipoAccion: act.tipoAccion,
@@ -1066,7 +1302,7 @@ export class GameStore {
         } else {
           runInAction(() => {
             const logEntry: ActionResolutionLog = {
-              jugadorNombre: act.jugador.nombre,
+              jugadorNombre: act.jugadorNombre,
               jugadorNumero: act.jugadorNumero,
               cartaNombre: act.cartaNombre,
               tipoAccion: act.tipoAccion,
@@ -1082,7 +1318,7 @@ export class GameStore {
       } else if (act.tipoAccion === 'INSPIRACION') {
         const musaName = act.musaName!;
         const targetCells = getInspirationTargetCells(musaName, currentTablero.solPos);
-        pTokensDeduct += targetCells.length * 2;
+        tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + targetCells.length * 2;
 
         runInAction(() => {
           if (!this.tablero) return;
@@ -1092,7 +1328,7 @@ export class GameStore {
               id: Date.now() + targetIndex * 10 + i,
               colocado: true,
               jugador: act.jugador,
-              jugadorId: act.jugador.id,
+              jugadorId: act.jugadorId,
             }));
             updatedG = updatedG.map((m, idx) =>
               idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] } : m
@@ -1107,7 +1343,7 @@ export class GameStore {
           }
 
           const logEntry: ActionResolutionLog = {
-            jugadorNombre: act.jugador.nombre,
+            jugadorNombre: act.jugadorNombre,
             jugadorNumero: act.jugadorNumero,
             cartaNombre: act.cartaNombre,
             tipoAccion: 'INSPIRACION',
@@ -1139,16 +1375,12 @@ export class GameStore {
         this.tablero.lunaPos
       );
 
-      const updatedJugadores = currentPartida.jugadores.map((j, i) => {
-        if (i === 0 && j.tokens) {
-          return { ...j, tokens: j.tokens.slice(pTokensDeduct) };
-        }
-        if (i === 1 && j.tokens) {
-          return { ...j, tokens: j.tokens.slice(2) };
-        }
-        if (i === 2 && j.tokens) {
-          return { ...j, tokens: j.tokens.slice(1) };
-        }
+      const updatedJugadores = currentPartida.jugadores.map((j) => {
+        const deduct = tokensDeductMap[j.id] || (j.numeroJugador === 1 ? (tokensDeductMap[1] || 0) : 0);
+        if (j.numeroJugador === 1 && j.tokens && deduct > 0) return { ...j, tokens: j.tokens.slice(deduct) };
+        if (j.numeroJugador === 2 && j.tokens) return { ...j, tokens: j.tokens.slice(2) };
+        if (j.numeroJugador === 3 && j.tokens) return { ...j, tokens: j.tokens.slice(1) };
+        if (j.tokens && deduct > 0) return { ...j, tokens: j.tokens.slice(deduct) };
         return j;
       });
 
@@ -1161,7 +1393,6 @@ export class GameStore {
         lunaPos: nextLuna,
       };
 
-      // Check end of game
       if (isFinishing) {
         const breakdown = calculateScoreBreakdown(this.tablero, updatedJugadores);
         const finalJugadores = updatedJugadores.map((j) => {
@@ -1188,6 +1419,7 @@ export class GameStore {
         this.scoreBreakdown = breakdown;
         this.isGameOver = true;
         this.isSubmitting = false;
+        this.isResolvingRound = false;
         this.activeMusaIndex = null;
         this.revolutionAnimating = false;
         this.setNotification('¡Partida finalizada! Calculando favores de las Musas...');
@@ -1203,9 +1435,12 @@ export class GameStore {
         this.selectedCard = null;
         this.hoveredCard = null;
         this.isSubmitting = false;
+        this.haSeleccionadoCarta = false;
+        this.seleccionesRonda = {};
+        this.isResolvingRound = false;
         this.activeMusaIndex = null;
         this.revolutionAnimating = false;
-        this.setNotification('Ronda resuelta. Los astros avanzan.');
+        this.setNotification(`¡Ronda ${nextRound} iniciada! Elige tu próxima carta.`);
         setTimeout(() => runInAction(() => { this.notification = null; }), 3500);
       }
     });
