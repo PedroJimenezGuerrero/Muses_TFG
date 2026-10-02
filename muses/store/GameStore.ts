@@ -1330,12 +1330,24 @@ export class GameStore {
 
       tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0);
 
+      let detalle = 'Ejecutando acción de la ronda...';
+      if (act.tipoAccion === 'DEVOCION_SOL' || act.tipoAccion === 'DEVOCION_LUNA') {
+        const targetIndex = mapAstroToGrid(act.astroPos!);
+        const musa = this.tablero.grid[targetIndex];
+        detalle = `Coloca 2 fichas de devoción en ${musa?.nombre || 'la musa'} (${act.tipoAccion === 'DEVOCION_SOL' ? 'Sol' : 'Luna'})`;
+      } else if (act.tipoAccion === 'REVOLUCION_SOL' || act.tipoAccion === 'REVOLUCION_LUNA') {
+        detalle = `Coloca 1 ficha al centro y rota el semiciclo ${act.tipoAccion === 'REVOLUCION_SOL' ? 'solar' : 'lunar'}`;
+      } else if (act.tipoAccion === 'INSPIRACION') {
+        detalle = `Coloca fichas geométricas según el Sol (${act.musaName || 'Inspiración'})`;
+      }
+      act.detalle = detalle;
+
       runInAction(() => {
-        this.currentExecutingAction = act;
+        this.currentExecutingAction = { ...act };
         this.pendingActions = actionsToExecute.slice(actIdx + 1);
         this.setNotification(`Resolviendo: ${act.jugadorNombre} juega ${act.cartaNombre}...`);
       });
-      await sleep(600);
+      await sleep(1000);
 
       if (act.tipoAccion === 'DEVOCION_SOL' || act.tipoAccion === 'DEVOCION_LUNA') {
         const targetIndex = mapAstroToGrid(act.astroPos!);
