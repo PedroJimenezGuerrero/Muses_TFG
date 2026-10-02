@@ -4,6 +4,7 @@ import { Partida, Jugador } from '@/types/game';
 
 export interface StatusPanelProps {
   partida: Partida;
+  currentUserId?: number;
   isConnected?: boolean;
   waitingForPlayers?: boolean;
   className?: string;
@@ -19,6 +20,7 @@ const PLAYER_COLORS: Record<number, { name: string; bg: string; text: string; bo
 
 export const StatusPanel = observer<StatusPanelProps>(({
   partida,
+  currentUserId,
   isConnected = true,
   waitingForPlayers = false,
   className = '',
@@ -137,6 +139,9 @@ export const StatusPanel = observer<StatusPanelProps>(({
             const colorConfig = PLAYER_COLORS[pNum] || PLAYER_COLORS[1];
             const remainingTokens = getRemainingTokens(jugador);
             const isExhausted = remainingTokens === 0;
+            const isMe = currentUserId !== undefined
+              ? (jugador.id === currentUserId || jugador.numeroJugador === currentUserId)
+              : (jugador.numeroJugador === 1);
 
             return (
               <div
@@ -147,8 +152,9 @@ export const StatusPanel = observer<StatusPanelProps>(({
               >
                 <div className="flex items-center gap-2">
                   <span className={`w-2.5 h-2.5 rounded-full border ${colorConfig.border} ${colorConfig.text}`} />
-                  <span className="font-semibold text-xs text-zinc-100 truncate max-w-[90px]">
+                  <span className="font-semibold text-xs text-zinc-100 truncate max-w-[120px]">
                     {jugador.nombre}
+                    {isMe && <span className="text-amber-400 font-normal ml-1 text-[11px]">(Tú)</span>}
                   </span>
                 </div>
 

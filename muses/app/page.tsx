@@ -115,6 +115,7 @@ const GamePage = observer(() => {
               <aside className="w-full lg:w-64 max-w-xs shrink-0 flex flex-col gap-3 z-20 -translate-y-4 sm:-translate-y-8">
                 <StatusPanel
                   partida={store.partida}
+                  currentUserId={store.jugadorActualId}
                   isConnected={store.isConnected}
                   waitingForPlayers={store.isSubmitting}
                 />
@@ -124,12 +125,13 @@ const GamePage = observer(() => {
             {/* Center Arena: 3x3 Board with Orbit and Action Resolution Stack */}
             {store.tablero && (
               <section className="flex-1 flex flex-col items-center justify-center relative z-10 -translate-y-8 sm:-translate-y-12">
-                {/* Visual Action Resolution Stack Overlay */}
-                <ActionResolutionStack
-                  currentAction={store.currentExecutingAction}
-                  pendingActions={store.pendingActions}
-                  className="mb-2"
-                />
+                {/* Visual Action Resolution Stack Overlay floating above board */}
+                <div className="absolute -top-16 sm:-top-20 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+                  <ActionResolutionStack
+                    currentAction={store.currentExecutingAction}
+                    pendingActions={store.pendingActions}
+                  />
+                </div>
 
                 <Board
                   tablero={store.tablero}
