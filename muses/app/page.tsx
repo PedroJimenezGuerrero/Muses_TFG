@@ -18,6 +18,11 @@ const GamePage = observer(() => {
   const store = gameStore;
   const [authOpen, setAuthOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Connect STOMP socket hook
   useGameSocket();
@@ -25,7 +30,7 @@ const GamePage = observer(() => {
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
         const response = await fetch(`${backendUrl}/status`);
         store.setConnected(response.ok);
       } catch {
@@ -56,7 +61,7 @@ const GamePage = observer(() => {
 
         <div className="flex items-center gap-2">
           {/* User Profile / Auth Button */}
-          {store.usuario ? (
+          {mounted && store.usuario ? (
             <button
               type="button"
               onClick={() => setProfileOpen(true)}
@@ -125,21 +130,18 @@ const GamePage = observer(() => {
             {/* Center Arena: 3x3 Board with Orbit and Action Resolution Stack */}
             {store.tablero && (
               <section className="flex-1 flex flex-col items-center justify-center relative z-10 -translate-y-8 sm:-translate-y-12">
-                {/* Visual Action Resolution Stack Overlay floating above board */}
-                <div className="absolute -top-16 sm:-top-20 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-                  <ActionResolutionStack
-                    currentAction={store.currentExecutingAction}
-                    pendingActions={store.pendingActions}
-                  />
-                </div>
-
                 <Board
                   tablero={store.tablero}
                   hoveredCard={store.hoveredCard}
                   selectedCard={store.selectedCard}
                   activeMusaIndex={store.activeMusaIndex}
                   revolutionAnimating={store.revolutionAnimating}
-                />
+                >
+                  <ActionResolutionStack
+                    currentAction={store.currentExecutingAction}
+                    pendingActions={store.pendingActions}
+                  />
+                </Board>
               </section>
             )}
 
@@ -223,6 +225,7 @@ const GamePage = observer(() => {
           partida={store.partida}
           breakdown={store.scoreBreakdown || { filas: [], totalesPorJugador: [], ganadores: [] }}
           onRestart={() => store.resetGame()}
+          onExitToLobby={() => store.abandonarSala()}
         />
       )}
     </div>

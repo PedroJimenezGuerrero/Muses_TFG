@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import confetti from 'canvas-confetti';
-import { Trophy, Crown, Medal, RotateCcw } from 'lucide-react';
+import { Trophy, Crown, Medal, RotateCcw, LogOut } from 'lucide-react';
 import { Partida, TipoMusa } from '@/types/game';
 import { ScoreBreakdown } from '@/types/scoring';
 
@@ -12,6 +12,7 @@ export interface GameOverModalProps {
   partida: Partida;
   breakdown: ScoreBreakdown;
   onRestart: () => void;
+  onExitToLobby?: () => void;
   className?: string;
 }
 
@@ -32,6 +33,7 @@ export const GameOverModal = observer<GameOverModalProps>(({
   partida,
   breakdown,
   onRestart,
+  onExitToLobby,
   className = '',
 }) => {
   const [hoveredTieMusa, setHoveredTieMusa] = useState<string | null>(null);
@@ -205,7 +207,14 @@ export const GameOverModal = observer<GameOverModalProps>(({
                   const rawMatrix = (breakdown as any)?.matrix || breakdown || {};
                   const musaBreakdown = rawMatrix?.[musa] ?? {};
                   // Detect tie across players
-                  const playerTokens = jugadores.map((j) => musaBreakdown[j.nombre]?.tokens ?? 0);
+                  const playerTokens = jugadores.map((j) => {
+                    const item =
+                      musaBreakdown[j.id ?? ''] ??
+                      musaBreakdown[String(j.id)] ??
+                      musaBreakdown[j.nombre] ??
+                      {};
+                    return item.tokens ?? 0;
+                  });
                   const maxTokens = Math.max(...playerTokens, 0);
                   const isTied =
                     maxTokens > 0 &&
@@ -222,20 +231,25 @@ export const GameOverModal = observer<GameOverModalProps>(({
                       </td>
 
                       {jugadores.map((jugador) => {
-                        const item = musaBreakdown[jugador.nombre] ?? { tokens: 0, points: 0 };
+                        const item =
+                          musaBreakdown[jugador.id ?? ''] ??
+                          musaBreakdown[String(jugador.id)] ??
+                          musaBreakdown[jugador.nombre] ??
+                          { tokens: 0, points: 0 };
+                        const pts = Number.isNaN(item.points) || item.points === undefined ? 0 : item.points;
                         return (
                           <React.Fragment key={`cell-${musa}-${jugador.id}`}>
                             <td
                               data-player={jugador.nombre}
                               className="py-2 px-2 text-center font-mono text-zinc-300"
                             >
-                              {item.tokens}
+                              {item.tokens ?? 0}
                             </td>
                             <td
                               data-player={jugador.nombre}
                               className="py-2 px-2 text-center font-mono font-bold text-amber-400"
                             >
-                              {item.points}
+                              {pts}
                             </td>
                           </React.Fragment>
                         );
@@ -282,14 +296,27 @@ export const GameOverModal = observer<GameOverModalProps>(({
           </div>
         </div>
 
-        {/* Restart Action Button */}
-        <div className="flex items-center justify-center pt-2">
+        {/* Action Buttons: Volver al Lobby / Nueva Partida */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          {onExitToLobby && (
+            <button
+              type="button"
+              data-testid="exit-lobby-btn"
+              onClick={onExitToLobby}
+              aria-label="Salir al Lobby"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-zinc-200 font-semibold text-sm sm:text-base shadow-lg transition-all cursor-pointer"
+            >
+              <LogOut className="w-5 h-5" />
+              <span>Volver al Lobby</span>
+            </button>
+          )}
+
           <button
             type="button"
             data-testid="restart-game-btn"
             onClick={onRestart}
             aria-label="Nueva Partida"
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-bold text-sm sm:text-base shadow-xl shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-bold text-sm sm:text-base shadow-xl shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
           >
             <RotateCcw className="w-5 h-5" />
             <span>Nueva Partida</span>
