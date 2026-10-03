@@ -244,6 +244,11 @@ public class PuntuacionService {
                         .count();
             }
             stats.setTokensColocados(stats.getTokensColocados() + tokensColocados);
+
+            if (jugador.getCartaInspiracion() != null && jugador.getCartaInspiracion().isUsada()) {
+                stats.setCartasUtilizadas(stats.getCartasUtilizadas() + 1);
+            }
+
             stats.setTiempoTotalJuego(stats.getTiempoTotalJuego() + partida.getDuracionTotal());
 
             estadisticasRepository.save(stats);
