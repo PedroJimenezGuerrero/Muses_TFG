@@ -61,11 +61,25 @@ export interface CartaInspiracion extends CartaBase {
 
 export type AnyCard = CartaAccion | CartaInspiracion;
 
+export interface Estadisticas {
+  id?: number;
+  partidasJugadas: number;
+  victorias: number;
+  derrotas: number;
+  tiempoTotalJuego: number; // en minutos
+  cartasUtilizadas: number;
+  tokensColocados: number;
+  puntuacionTotal: number;
+}
+
 export interface Usuario {
   id?: number;
   username: string;
   nombre?: string;
   email?: string;
+  password?: string;
+  fechaRegistro?: string;
+  estadisticas?: Estadisticas;
 }
 
 export interface Jugador {
@@ -76,6 +90,8 @@ export interface Jugador {
   cartaInspiracion?: CartaInspiracion;
   tokens?: Token[];
   usuario?: Usuario;
+  esBot?: boolean;
+  conectado?: boolean;
 }
 
 export interface Partida {
@@ -222,16 +238,90 @@ export const ACCIONES_METADATA: Record<TipoAccion, { nombre: string; prioridad: 
   REVOLUCION_SOL: {
     nombre: 'Revolución Solar',
     prioridad: 3,
-    descripcion: 'Mueve la musa central a la posición solar y rota 6 musas en sentido horario.',
+    descripcion: 'Coloca 1 ficha en la musa central, mueve la musa central a la posición solar y rota 6 musas en sentido horario.',
   },
   REVOLUCION_LUNA: {
     nombre: 'Revolución Lunar',
     prioridad: 4,
-    descripcion: 'Mueve la musa central a la posición lunar y rota 6 musas en sentido horario.',
+    descripcion: 'Coloca 1 ficha en la musa central, mueve la musa central a la posición lunar y rota 6 musas en sentido horario.',
   },
   DEVOCION_LUNA: {
     nombre: 'Devoción Lunar',
     prioridad: 5,
     descripcion: 'Coloca 2 fichas de devoción en la musa iluminada por la Luna.',
+  },
+};
+
+export interface InspiracionMetadata {
+  nombre: TipoMusa;
+  displayName: string;
+  orientacion: TipoInspiracion;
+  descripcion: string;
+  requiere: string;
+}
+
+export const INSPIRACIONES_METADATA: Record<TipoMusa, InspiracionMetadata> = {
+  CLIO: {
+    nombre: 'CLIO',
+    displayName: 'Clío',
+    orientacion: 'LADOS',
+    descripcion: 'Coloca 2 fichas de devoción en el lado opuesto al Sol.',
+    requiere: 'Requiere Sol en Lados (laterales).',
+  },
+  CALIOPE: {
+    nombre: 'CALIOPE',
+    displayName: 'Calíope',
+    orientacion: 'LADOS',
+    descripcion: 'Coloca 1 ficha de devoción en 2 musas (vértices opuestos según el Sol).',
+    requiere: 'Requiere Sol en Lados (laterales).',
+  },
+  ERATO: {
+    nombre: 'ERATO',
+    displayName: 'Érato',
+    orientacion: 'VERTICES',
+    descripcion: 'Coloca 2 fichas de devoción en el vértice según la orientación del Sol.',
+    requiere: 'Requiere Sol en Vértices (esquinas).',
+  },
+  EUTERPE: {
+    nombre: 'EUTERPE',
+    displayName: 'Euterpe',
+    orientacion: 'LADOS',
+    descripcion: 'Coloca 2 fichas de devoción en el vértice derecho del lado opuesto al Sol.',
+    requiere: 'Requiere Sol en Lados (laterales).',
+  },
+  MELPOMENE: {
+    nombre: 'MELPOMENE',
+    displayName: 'Melpómene',
+    orientacion: 'LADOS',
+    descripcion: 'Coloca 2 fichas de devoción en el lado adyacente según el Sol.',
+    requiere: 'Requiere Sol en Lados (laterales).',
+  },
+  POLIMNIA: {
+    nombre: 'POLIMNIA',
+    displayName: 'Polimnia',
+    orientacion: 'VERTICES',
+    descripcion: 'Coloca 2 fichas de devoción en el vértice opuesto al Sol.',
+    requiere: 'Requiere Sol en Vértices (esquinas).',
+  },
+  TALIA: {
+    nombre: 'TALIA',
+    displayName: 'Talía',
+    orientacion: 'LADOS',
+    descripcion: 'Coloca 2 fichas de devoción en el vértice izquierdo del lado opuesto al Sol.',
+    requiere: 'Requiere Sol en Lados (laterales).',
+  },
+  TERPSICORE: {
+    nombre: 'TERPSICORE',
+    displayName: 'Terpsícore',
+    orientacion: 'VERTICES',
+    descripcion: 'Coloca 2 fichas de devoción en el lado según la orientación del Sol.',
+    requiere: 'Requiere Sol en Vértices (esquinas).',
+  },
+  URANIA: {
+    nombre: 'URANIA',
+    displayName: 'Urania',
+    orientacion: 'VERTICES',
+    descripcion: 'Coloca 2 fichas de devoción en el lado según la orientación del Sol.',
+    requiere: 'Requiere Sol en Vértices (esquinas).',
   },
 };
