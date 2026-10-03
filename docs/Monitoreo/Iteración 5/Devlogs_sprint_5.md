@@ -51,3 +51,11 @@
 - Se ha creado el componente `LobbyView` en el frontend con dos modos: crear sala (elige número de jugadores) y unirse a sala existente (introduce código alfanumérico `MUS-XXXX`).
 - El componente se conecta al endpoint REST del backend y suscribe al tópico STOMP de la sala para actualizar la lista de jugadores en tiempo real.
 - Se han verificado los 110 tests de Vitest: todos siguen pasando con el nuevo componente añadido.
+
+## Devlog 9: 20/06/2026
+
+- Se ha mejorado la heurística voraz del bot tanto en el backend (`BotServiceImpl`) como en el frontend (`GameStore`):
+  - Se ha implementado la simulación marginal de puntos (`calcularDeltaPuntos` / `computeDeltaPoints`) para las acciones de Revolución sobre la musa central (`grid[4]`), valorando tácticamente si colocar una ficha en el centro permite al bot ganar la musa en solitario o romper empates.
+  - Se ha incorporado un sistema estocástico de toma de decisiones mediante una ruleta de probabilidades ponderadas (30% primera opción más óptima, 50% segunda mejor opción, 20% tercera opción alternativa/riesgo), evitando que los bots exhiban decisiones predecibles o idénticas en partidas sucesivas.
+- Se ha verificado la suite completa de pruebas: 290 tests de Spring Boot y 113 tests de Vitest ejecutándose con éxito.
+
