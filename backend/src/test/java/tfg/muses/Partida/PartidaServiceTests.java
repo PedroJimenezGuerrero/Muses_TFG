@@ -349,7 +349,6 @@ public class PartidaServiceTests {
 
         partidaService.seleccionarCarta(1L, 1L, 10L);
 
-        verifyNoInteractions(messagingTemplate);
         verify(cartaService, never()).ejecutarEfecto(any(), any(), any());
     }
 

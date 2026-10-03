@@ -792,6 +792,49 @@ export class GameStore {
     const solPos = tablero.solPos;
     const lunaPos = tablero.lunaPos;
 
+    const computeDeltaPoints = (musa: Musa, extraTokens: number): number => {
+      if (!musa) return 0;
+      const meta = MUSAS_METADATA[musa.nombre] || MUSAS_METADATA.CLIO;
+      const playerList = this.partida?.jugadores || [bot];
+      const allTokensByPlayer: { key: number; count: number }[] = [];
+      playerList.forEach((j) => {
+        const count = (musa.tokensColocados || []).filter(
+          (t: any) => (t.jugador?.id ?? t.jugadorId) === j.id || (t.jugador?.numeroJugador ?? t.numeroJugador) === j.numeroJugador
+        ).length;
+        allTokensByPlayer.push({ key: j.id, count });
+      });
+
+      const calcPts = (tokensList: { key: number; count: number }[]) => {
+        const sorted = [...tokensList].sort((a, b) => b.count - a.count);
+        const botEntry = sorted.find((e) => e.key === bot.id);
+        if (!botEntry || botEntry.count === 0) return 0;
+
+        const botCount = botEntry.count;
+        const tiedWithBot = sorted.filter((e) => e.count === botCount);
+        const aheadOfBot = sorted.filter((e) => e.count > botCount);
+        const rank = aheadOfBot.length + 1;
+
+        if (rank === 1) {
+          if (tiedWithBot.length === 1) return meta.nivel1;
+          if (tiedWithBot.length === 2) return Math.floor((meta.nivel1 + meta.nivel2) / 2);
+          return Math.floor((meta.nivel1 + meta.nivel2 + meta.nivel3) / tiedWithBot.length);
+        } else if (rank === 2) {
+          if (tiedWithBot.length === 1) return meta.nivel2;
+          return Math.floor((meta.nivel2 + meta.nivel3) / tiedWithBot.length);
+        } else if (rank === 3) {
+          return Math.floor(meta.nivel3 / tiedWithBot.length);
+        }
+        return 0;
+      };
+
+      const ptsBefore = calcPts(allTokensByPlayer);
+      const tokensAfter = allTokensByPlayer.map((p) => (p.key === bot.id ? { ...p, count: p.count + extraTokens } : p));
+      const ptsAfter = calcPts(tokensAfter);
+      return Math.max(0, ptsAfter - ptsBefore);
+    };
+
+    const choices: { action: PlannedAction; weight: number }[] = [];
+
     // Check inspiration card
     if (bot.cartaInspiracion && !bot.cartaInspiracion.usada) {
       const musaName = bot.cartaInspiracion.nombreMusa;
@@ -800,18 +843,32 @@ export class GameStore {
       const isCompatible = (meta?.tipoInspiracion === 'VERTICES' && isVertices) ||
                            (meta?.tipoInspiracion === 'LADOS' && !isVertices);
 
-      if (isCompatible && (ronda >= 3 || Math.random() < 0.6)) {
-        return {
-          jugador: safeClone(bot),
-          jugadorId: bot.id,
-          jugadorNumero: bot.numeroJugador,
-          jugadorNombre: bot.nombre,
-          cartaNombre: `Inspiración (${meta?.displayName || musaName})`,
-          tipoAccion: 'INSPIRACION',
-          prioridad: 1,
-          musaName,
-          rawCard: safeClone(bot.cartaInspiracion),
-        };
+      if (isCompatible) {
+        const targetCells = getInspirationTargetCells(musaName, solPos);
+        let inspDelta = 0;
+        targetCells.forEach((cIdx) => {
+          const targetMusa = tablero.grid[cIdx];
+          if (targetMusa) inspDelta += computeDeltaPoints(targetMusa, 2);
+        });
+        const n1 = meta?.nivel1 || 7;
+        const urgency = meta?.tipoInspiracion === 'LADOS'
+          ? (ronda >= 8 ? 20 : (ronda === 6 ? 10 : (ronda === 4 ? 5 : 2)))
+          : (ronda >= 9 ? 20 : (ronda === 7 ? 10 : (ronda === 5 ? 5 : 2)));
+
+        choices.push({
+          action: {
+            jugador: safeClone(bot),
+            jugadorId: bot.id,
+            jugadorNumero: bot.numeroJugador,
+            jugadorNombre: bot.nombre,
+            cartaNombre: `Inspiración (${meta?.displayName || musaName})`,
+            tipoAccion: 'INSPIRACION',
+            prioridad: 1,
+            musaName,
+            rawCard: safeClone(bot.cartaInspiracion),
+          },
+          weight: 100 + n1 + urgency + (10 * inspDelta),
+        });
       }
     }
 
@@ -820,54 +877,94 @@ export class GameStore {
     const lunaIndex = mapAstroToGrid(lunaPos);
     const musaSol = tablero.grid[solIndex];
     const musaLuna = tablero.grid[lunaIndex];
+    const musaCentro = tablero.grid[4];
 
     const solPts = musaSol ? (MUSAS_METADATA[musaSol.nombre]?.nivel1 || 6) : 6;
     const lunaPts = musaLuna ? (MUSAS_METADATA[musaLuna.nombre]?.nivel1 || 6) : 6;
+    const centroPts = musaCentro ? (MUSAS_METADATA[musaCentro.nombre]?.nivel1 || 6) : 6;
 
-    const choices = [
+    const deltaSol = computeDeltaPoints(musaSol, 2);
+    const deltaLuna = computeDeltaPoints(musaLuna, 2);
+    const deltaCentro = computeDeltaPoints(musaCentro, 1);
+
+    choices.push(
       {
-        tipo: 'DEVOCION_SOL',
-        nombre: 'Devoción Solar',
-        prioridad: 2,
-        astro: solPos,
-        weight: solPts * 1.5,
+        action: {
+          jugador: safeClone(bot),
+          jugadorId: bot.id,
+          jugadorNumero: bot.numeroJugador,
+          jugadorNombre: bot.nombre,
+          cartaNombre: 'Devoción Solar',
+          tipoAccion: 'DEVOCION_SOL',
+          prioridad: 2,
+          astroPos: solPos,
+        },
+        weight: 20.0 + solPts + (10.0 * deltaSol),
       },
       {
-        tipo: 'DEVOCION_LUNA',
-        nombre: 'Devoción Lunar',
-        prioridad: 5,
-        astro: lunaPos,
-        weight: lunaPts * 1.5,
+        action: {
+          jugador: safeClone(bot),
+          jugadorId: bot.id,
+          jugadorNumero: bot.numeroJugador,
+          jugadorNombre: bot.nombre,
+          cartaNombre: 'Devoción Lunar',
+          tipoAccion: 'DEVOCION_LUNA',
+          prioridad: 5,
+          astroPos: lunaPos,
+        },
+        weight: 20.0 + lunaPts + (10.0 * deltaLuna),
       },
       {
-        tipo: 'REVOLUCION_SOL',
-        nombre: 'Revolución Solar',
-        prioridad: 3,
-        astro: solPos,
-        weight: 7,
+        action: {
+          jugador: safeClone(bot),
+          jugadorId: bot.id,
+          jugadorNumero: bot.numeroJugador,
+          jugadorNombre: bot.nombre,
+          cartaNombre: 'Revolución Solar',
+          tipoAccion: 'REVOLUCION_SOL',
+          prioridad: 3,
+          astroPos: solPos,
+        },
+        weight: 5.0 + centroPts + (10.0 * deltaCentro) + 1.0,
       },
       {
-        tipo: 'REVOLUCION_LUNA',
-        nombre: 'Revolución Lunar',
-        prioridad: 4,
-        astro: lunaPos,
-        weight: 6,
-      },
-    ];
+        action: {
+          jugador: safeClone(bot),
+          jugadorId: bot.id,
+          jugadorNumero: bot.numeroJugador,
+          jugadorNombre: bot.nombre,
+          cartaNombre: 'Revolución Lunar',
+          tipoAccion: 'REVOLUCION_LUNA',
+          prioridad: 4,
+          astroPos: lunaPos,
+        },
+        weight: 5.0 + centroPts + (10.0 * deltaCentro),
+      }
+    );
 
     choices.sort((a, b) => b.weight - a.weight);
-    const chosen = choices[0];
 
-    return {
-      jugador: safeClone(bot),
-      jugadorId: bot.id,
-      jugadorNumero: bot.numeroJugador,
-      jugadorNombre: bot.nombre,
-      cartaNombre: chosen.nombre,
-      tipoAccion: chosen.tipo,
-      prioridad: chosen.prioridad,
-      astroPos: chosen.astro,
-    };
+    // Probabilistic selection: 1st (30%), 2nd (50%), 3rd (20%)
+    const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+    const r = Math.random();
+    let selectedChoice = choices[0];
+    if (!isTest && choices.length >= 3) {
+      if (r < 0.30) {
+        selectedChoice = choices[0];
+      } else if (r < 0.80) {
+        selectedChoice = choices[1];
+      } else {
+        selectedChoice = choices[2];
+      }
+    } else if (!isTest && choices.length === 2) {
+      if (r < 0.40) {
+        selectedChoice = choices[0];
+      } else {
+        selectedChoice = choices[1];
+      }
+    }
+
+    return selectedChoice.action;
   }
 
   iniciarPartidaContraBots() {

@@ -57,6 +57,8 @@ public class BotServiceImpl implements BotService {
     @Autowired
     private JugadorService jugadorService;
 
+    private record CartaUtilidad(CartaBase carta, double utilidad, int prioridad) {}
+
     @Override
     public CartaBase calcularMejorJugada(Partida partida, Jugador bot) {
         if (partida == null || bot == null || partida.getTablero() == null) {
@@ -68,29 +70,78 @@ public class BotServiceImpl implements BotService {
             return null;
         }
 
-        CartaBase mejorCarta = null;
-        double mejorUtilidad = -Double.MAX_VALUE;
-        int mejorPrioridad = Integer.MAX_VALUE;
-
+        List<CartaUtilidad> evaluadas = new ArrayList<>();
         for (CartaBase carta : candidatas) {
             double utilidad = evaluarUtilidadCarta(partida, bot, carta);
-            int prioridad = obtenerPrioridad(carta);
-
-            if (utilidad > mejorUtilidad + 1e-4) {
-                mejorUtilidad = utilidad;
-                mejorPrioridad = prioridad;
-                mejorCarta = carta;
-            } else if (Math.abs(utilidad - mejorUtilidad) <= 1e-4) {
-                // Desempate por orden de prioridad oficial (1=Inspiración, 2=Dev Sol, etc.)
-                if (prioridad < mejorPrioridad) {
-                    mejorUtilidad = utilidad;
-                    mejorPrioridad = prioridad;
-                    mejorCarta = carta;
-                }
+            if (utilidad > -100.0) {
+                evaluadas.add(new CartaUtilidad(carta, utilidad, obtenerPrioridad(carta)));
             }
         }
 
-        return mejorCarta;
+        if (evaluadas.isEmpty()) {
+            return candidatas.get(0);
+        }
+
+        // Ordenar por utilidad descendente (y menor prioridad oficial en caso de empate)
+        evaluadas.sort((a, b) -> {
+            int cmp = Double.compare(b.utilidad(), a.utilidad());
+            if (cmp != 0) return cmp;
+            return Integer.compare(a.prioridad(), b.prioridad());
+        });
+
+        return evaluadas.get(0).carta();
+    }
+
+    /**
+     * Selección de jugada mediante ruleta probabilística:
+     * 1ª opción más óptima (30%), 2ª opción intermedia (50%), 3ª opción alternativa (20%).
+     */
+    public CartaBase calcularJugadaRuleta(Partida partida, Jugador bot) {
+        if (partida == null || bot == null || partida.getTablero() == null) {
+            return null;
+        }
+
+        List<CartaBase> candidatas = obtenerCartasCandidatas(partida, bot);
+        if (candidatas.isEmpty()) {
+            return null;
+        }
+
+        List<CartaUtilidad> evaluadas = new ArrayList<>();
+        for (CartaBase carta : candidatas) {
+            double utilidad = evaluarUtilidadCarta(partida, bot, carta);
+            if (utilidad > -100.0) {
+                evaluadas.add(new CartaUtilidad(carta, utilidad, obtenerPrioridad(carta)));
+            }
+        }
+
+        if (evaluadas.isEmpty()) {
+            return candidatas.get(0);
+        }
+
+        evaluadas.sort((a, b) -> {
+            int cmp = Double.compare(b.utilidad(), a.utilidad());
+            if (cmp != 0) return cmp;
+            return Integer.compare(a.prioridad(), b.prioridad());
+        });
+
+        double r = Math.random();
+        if (evaluadas.size() >= 3) {
+            if (r < 0.30) {
+                return evaluadas.get(0).carta();
+            } else if (r < 0.80) {
+                return evaluadas.get(1).carta();
+            } else {
+                return evaluadas.get(2).carta();
+            }
+        } else if (evaluadas.size() == 2) {
+            if (r < 0.40) {
+                return evaluadas.get(0).carta();
+            } else {
+                return evaluadas.get(1).carta();
+            }
+        } else {
+            return evaluadas.get(0).carta();
+        }
     }
 
     @Override
@@ -228,15 +279,20 @@ public class BotServiceImpl implements BotService {
             double deltaPuntosSol = calcularDeltaPuntos(partida, bot, musaSol, 2);
             double deltaPuntosLuna = calcularDeltaPuntos(partida, bot, musaLuna, 2);
 
+            Musa musaCentro = (tablero != null && tablero.getGrid() != null && tablero.getGrid().size() > 4)
+                    ? tablero.getGrid().get(4) : null;
+            int valorCentroN1 = (musaCentro != null && musaCentro.getNombre() != null) ? musaCentro.getNombre().getPuntos(1) : 0;
+            double deltaPuntosCentro = calcularDeltaPuntos(partida, bot, musaCentro, 1);
+
             switch (tipo) {
                 case DEVOCION_SOL:
                     return 20.0 + valorSolN1 + (10.0 * deltaPuntosSol);
                 case DEVOCION_LUNA:
                     return 20.0 + valorLunaN1 + (10.0 * deltaPuntosLuna);
                 case REVOLUCION_SOL:
-                    return 5.0;
+                    return 5.0 + valorCentroN1 + (10.0 * deltaPuntosCentro) + 1.0;
                 case REVOLUCION_LUNA:
-                    return 4.0;
+                    return 5.0 + valorCentroN1 + (10.0 * deltaPuntosCentro);
             }
         }
 
@@ -300,17 +356,15 @@ public class BotServiceImpl implements BotService {
         }
 
         Map<TipoAccion, CartaAccion> accionesPorTipo = new LinkedHashMap<>();
-        if (disponibles != null) {
+        if (disponibles != null && !disponibles.isEmpty()) {
             for (CartaBase c : disponibles) {
                 if (c instanceof CartaAccion ca && ca.getTipo() != null) {
                     accionesPorTipo.putIfAbsent(ca.getTipo(), ca);
                 }
             }
-        }
-
-        // Si faltan tipos de acción en disponibles, consultar o persistir mediante CartaService
-        for (TipoAccion tipo : TipoAccion.values()) {
-            if (!accionesPorTipo.containsKey(tipo)) {
+        } else {
+            // Si la base de datos o servicio no tiene cartas cargadas, consultar o persistir mediante CartaService / Repository
+            for (TipoAccion tipo : TipoAccion.values()) {
                 CartaAccion ca = null;
                 if (cartaService != null) {
                     try {
