@@ -12,30 +12,30 @@ export interface ActionResolutionStackProps {
 
 const PLAYER_THEMES: Record<number, { bg: string; border: string; glow: string; text: string; badge: string }> = {
   1: {
-    bg: 'from-amber-950/95 via-zinc-950/95 to-black/95',
+    bg: 'from-amber-950/80 via-zinc-950/80 to-black/80',
     border: 'border-amber-400/80',
-    glow: 'shadow-[0_0_50px_rgba(251,191,36,0.5)]',
+    glow: 'shadow-[0_0_35px_rgba(251,191,36,0.35)]',
     text: 'text-amber-200',
     badge: 'bg-amber-500 text-black',
   },
   2: {
-    bg: 'from-blue-950/95 via-zinc-950/95 to-black/95',
+    bg: 'from-blue-950/80 via-zinc-950/80 to-black/80',
     border: 'border-blue-400/80',
-    glow: 'shadow-[0_0_50px_rgba(96,165,250,0.5)]',
+    glow: 'shadow-[0_0_35px_rgba(96,165,250,0.35)]',
     text: 'text-blue-200',
     badge: 'bg-blue-500 text-white',
   },
   3: {
-    bg: 'from-red-950/95 via-zinc-950/95 to-black/95',
+    bg: 'from-red-950/80 via-zinc-950/80 to-black/80',
     border: 'border-red-400/80',
-    glow: 'shadow-[0_0_50px_rgba(248,113,113,0.5)]',
+    glow: 'shadow-[0_0_35px_rgba(248,113,113,0.35)]',
     text: 'text-red-200',
     badge: 'bg-red-500 text-white',
   },
   4: {
-    bg: 'from-emerald-950/95 via-zinc-950/95 to-black/95',
+    bg: 'from-emerald-950/80 via-zinc-950/80 to-black/80',
     border: 'border-emerald-400/80',
-    glow: 'shadow-[0_0_50px_rgba(52,211,153,0.5)]',
+    glow: 'shadow-[0_0_35px_rgba(52,211,153,0.35)]',
     text: 'text-emerald-200',
     badge: 'bg-emerald-500 text-black',
   },
@@ -76,15 +76,15 @@ export const ActionResolutionStack = observer<ActionResolutionStackProps>(({
       role="region"
       aria-label="Pila de resolución de acciones"
       data-testid="action-resolution-stack"
-      className={`fixed inset-0 z-50 pointer-events-none flex flex-col items-center justify-center p-4 ${className}`}
+      className={`absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-center p-2 ${className}`}
     >
-      {/* Background Dim Vignette */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 pointer-events-auto" />
+      {/* Background Dim Vignette over Board Grid (No blur, transparent to see moving tokens/cards) */}
+      <div className="absolute inset-0 bg-black/25 rounded-3xl transition-opacity duration-300 pointer-events-none border border-amber-500/20" />
 
       {/* Center Card Stack Container */}
       <div className="relative z-10 flex flex-col items-center max-w-lg w-full">
         {/* Stack Header Badge */}
-        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/85 border border-amber-400/50 text-xs uppercase font-bold tracking-widest text-amber-300 mb-3 shadow-2xl backdrop-blur-xl animate-bounce">
+        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/80 border border-amber-400/50 text-xs uppercase font-bold tracking-widest text-amber-300 mb-2.5 shadow-xl animate-bounce">
           <Layers className="w-4 h-4 text-amber-400" />
           <span>Pila de Acciones de la Ronda</span>
         </div>
@@ -98,7 +98,7 @@ export const ActionResolutionStack = observer<ActionResolutionStackProps>(({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.85, opacity: 0, y: -30 }}
               transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-              className={`relative w-80 sm:w-[420px] p-5 rounded-3xl bg-gradient-to-b ${activeTheme.bg} border-2 ${activeTheme.border} ${activeTheme.glow} backdrop-blur-2xl pointer-events-auto z-30 flex flex-col gap-3`}
+              className={`relative w-80 sm:w-[420px] p-5 rounded-3xl bg-gradient-to-b ${activeTheme.bg} border-2 ${activeTheme.border} ${activeTheme.glow} pointer-events-auto z-30 flex flex-col gap-3 shadow-2xl`}
             >
               {/* Card Header: Player Info & Priority Badge */}
               <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
@@ -122,7 +122,7 @@ export const ActionResolutionStack = observer<ActionResolutionStackProps>(({
 
               {/* Action Body: Large Icon & Action Description */}
               <div className="flex items-center gap-4 py-1">
-                <div className="w-14 h-14 rounded-2xl bg-black/60 border border-white/15 flex items-center justify-center shrink-0 shadow-inner">
+                <div className="w-14 h-14 rounded-2xl bg-black/50 border border-white/15 flex items-center justify-center shrink-0 shadow-inner">
                   {getActionIcon(currentAction.tipoAccion)}
                 </div>
                 <div className="flex flex-col min-w-0 flex-1">
@@ -140,7 +140,7 @@ export const ActionResolutionStack = observer<ActionResolutionStackProps>(({
 
         {/* Stack of Pending Actions Underneath */}
         {pendingActions.length > 0 && (
-          <div className="w-full mt-2.5 flex flex-col items-center gap-2 pointer-events-auto">
+          <div className="w-full mt-2 flex flex-col items-center gap-1.5 pointer-events-auto">
             {pendingActions.map((act, index) => {
               const theme = PLAYER_THEMES[act.jugadorNumero] || PLAYER_THEMES[1];
               const offsetScale = 1 - (index + 1) * 0.04;
@@ -154,7 +154,7 @@ export const ActionResolutionStack = observer<ActionResolutionStackProps>(({
                   animate={{ opacity, y: 0, scale: offsetScale }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-                  className="w-76 sm:w-[390px] px-4 py-2.5 rounded-2xl bg-zinc-950/90 border border-zinc-700/70 backdrop-blur-xl shadow-xl flex items-center justify-between gap-3"
+                  className="w-76 sm:w-[390px] px-4 py-2 rounded-2xl bg-zinc-950/80 border border-zinc-700/60 shadow-lg flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { CartaInspiracion, AnyCard, MUSAS_METADATA, TipoMusa } from '@/types/game';
+import { CartaInspiracion, AnyCard, MUSAS_METADATA, INSPIRACIONES_METADATA, TipoMusa } from '@/types/game';
 import { canPlayInspirationCard, getInspirationTargetCells } from '@/lib/gameRules';
 import { InspirationCardSvg } from '@/components/svg/InspirationCardSvg';
 
@@ -30,6 +30,7 @@ export const InspirationCard = observer<InspirationCardProps>(({
 
   const musaName = ((card as any).tipoMusa || (card as any).nombreMusa || 'TERPSICORE') as TipoMusa;
   const meta = MUSAS_METADATA[musaName] || MUSAS_METADATA.TERPSICORE;
+  const inspMeta = INSPIRACIONES_METADATA[musaName];
   const orientacion = (card as any).orientacion ?? meta.tipoInspiracion;
   const isUsada = !!(card as any).usada;
 
@@ -151,13 +152,22 @@ export const InspirationCard = observer<InspirationCardProps>(({
               Única
             </span>
           </div>
-          <p className="text-[11px] text-zinc-300 leading-snug">
-            {isUsada
-              ? 'Ya has utilizado esta carta en una ronda anterior.'
-              : isRuleDisabled
-              ? `Requiere que el Sol esté en posición de ${orientacion}.`
-              : `Coloca 1 ficha en la musa ${meta.displayName}.`}
-          </p>
+          <div className="space-y-1.5 text-[11px] leading-snug">
+            <p className="text-zinc-200 font-medium">
+              {inspMeta?.descripcion || 'Coloca fichas de devoción según el patrón geométrico del Sol.'}
+            </p>
+            {isUsada ? (
+              <p className="text-zinc-500 italic">Ya has utilizado esta carta en una ronda anterior.</p>
+            ) : isRuleDisabled ? (
+              <p className="text-amber-400/90 text-[10px] font-semibold">
+                ⚠️ {inspMeta?.requiere || `Requiere Sol en ${orientacion}.`}
+              </p>
+            ) : (
+              <p className="text-emerald-400 text-[10px] font-semibold flex items-center gap-1">
+                ✓ Orientación solar compatible (Lista para jugar)
+              </p>
+            )}
+          </div>
         </div>
       )}
     </button>

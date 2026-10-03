@@ -15,6 +15,7 @@ export interface BoardProps {
   onPositionSelect?: (pos: number) => void;
   onCardClick?: (index: number) => void;
   className?: string;
+  children?: React.ReactNode;
 }
 
 export const Board = observer<BoardProps>(({
@@ -26,6 +27,7 @@ export const Board = observer<BoardProps>(({
   onPositionSelect,
   onCardClick,
   className = '',
+  children,
 }) => {
   const activeCard = hoveredCard ?? selectedCard;
 
@@ -135,6 +137,7 @@ export const Board = observer<BoardProps>(({
               </motion.div>
             );
           })}
+          {children}
         </div>
       </AstroOrbit>
     </div>
