@@ -4,7 +4,8 @@ import SockJS from 'sockjs-client';
 export class SocketService {
   private client: Client | null = null;
   private connected: boolean = false;
-  private subscriptions: Map<string, any> = new Map();
+  private listeners: Map<string, Set<(data: any) => void>> = new Map();
+  private stompSubscriptions: Map<string, any> = new Map();
 
   connect(
     onConnect?: () => void,
@@ -29,6 +30,8 @@ export class SocketService {
       },
       onConnect: () => {
         this.connected = true;
+        // Re-subscribe all active topics
+        this.resubscribeAll();
         if (onConnect) onConnect();
       },
       onStompError: (frame) => {
@@ -39,56 +42,69 @@ export class SocketService {
       },
       onWebSocketClose: () => {
         this.connected = false;
+        this.stompSubscriptions.clear();
       },
     });
 
     this.client.activate();
   }
 
-  subscribe(topic: string, callback: (data: any) => void) {
-    if (!this.client) {
-      this.connect(() => this.subscribe(topic, callback));
-      return;
+  private resubscribeAll() {
+    if (!this.client || !this.client.connected) return;
+
+    this.listeners.forEach((_, topic) => {
+      if (!this.stompSubscriptions.has(topic)) {
+        const sub = this.client!.subscribe(topic, (message: IMessage) => {
+          this.notifyListeners(topic, message.body);
+        });
+        this.stompSubscriptions.set(topic, sub);
+      }
+    });
+  }
+
+  private notifyListeners(topic: string, body: string) {
+    let parsedData: any = body;
+    try {
+      parsedData = JSON.parse(body);
+    } catch (e) {
+      parsedData = body;
     }
 
-    // Unsubscribe existing if any
-    if (this.subscriptions.has(topic)) {
-      this.subscriptions.get(topic).unsubscribe();
-      this.subscriptions.delete(topic);
-    }
-
-    if (this.client.connected) {
-      const sub = this.client.subscribe(topic, (message: IMessage) => {
+    const set = this.listeners.get(topic);
+    if (set) {
+      set.forEach((cb) => {
         try {
-          const parsed = JSON.parse(message.body);
-          callback(parsed);
-        } catch (e) {
-          callback(message.body);
+          cb(parsedData);
+        } catch (err) {
+          console.error(`Error in STOMP listener for topic ${topic}:`, err);
         }
       });
-      this.subscriptions.set(topic, sub);
-    } else {
-      // Re-subscribe once connected
-      const prevOnConnect = this.client.onConnect;
-      this.client.onConnect = (frame) => {
-        if (prevOnConnect) prevOnConnect(frame);
-        const sub = this.client!.subscribe(topic, (message: IMessage) => {
-          try {
-            const parsed = JSON.parse(message.body);
-            callback(parsed);
-          } catch (e) {
-            callback(message.body);
-          }
-        });
-        this.subscriptions.set(topic, sub);
-      };
+    }
+  }
+
+  subscribe(topic: string, callback: (data: any) => void) {
+    if (!this.listeners.has(topic)) {
+      this.listeners.set(topic, new Set());
+    }
+    this.listeners.get(topic)!.add(callback);
+
+    if (!this.client || !this.connected) {
+      this.connect();
+    } else if (this.client.connected && !this.stompSubscriptions.has(topic)) {
+      const sub = this.client.subscribe(topic, (message: IMessage) => {
+        this.notifyListeners(topic, message.body);
+      });
+      this.stompSubscriptions.set(topic, sub);
     }
   }
 
   unsubscribe(topic: string) {
-    if (this.subscriptions.has(topic)) {
-      this.subscriptions.get(topic).unsubscribe();
-      this.subscriptions.delete(topic);
+    this.listeners.delete(topic);
+    if (this.stompSubscriptions.has(topic)) {
+      try {
+        this.stompSubscriptions.get(topic).unsubscribe();
+      } catch (e) {}
+      this.stompSubscriptions.delete(topic);
     }
   }
 
@@ -102,8 +118,11 @@ export class SocketService {
   }
 
   disconnect() {
-    this.subscriptions.forEach((sub) => sub.unsubscribe());
-    this.subscriptions.clear();
+    this.stompSubscriptions.forEach((sub) => {
+      try { sub.unsubscribe(); } catch (e) {}
+    });
+    this.stompSubscriptions.clear();
+    this.listeners.clear();
     if (this.client) {
       this.client.deactivate();
       this.client = null;

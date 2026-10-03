@@ -307,6 +307,21 @@ public class BotServiceTest {
                 assertNotNull(jugada);
             });
         }
+
+        @Test
+        @DisplayName("El bot resuelve cartas con ID persistido incluso si cartaService.getAll() está vacío")
+        void obtenerCartasCandidatas_recuperaCartasConId_cuandoGetAllVacio() {
+            when(cartaService.getAll()).thenReturn(List.of());
+            when(cartaService.obtenerOCrearCartaAccion(any(TipoAccion.class))).thenAnswer(inv -> {
+                TipoAccion t = inv.getArgument(0);
+                return buildCartaAccion(500L + t.ordinal(), t);
+            });
+
+            List<CartaBase> candidatas = botService.obtenerCartasCandidatas(partida, botJugador);
+
+            assertFalse(candidatas.isEmpty());
+            assertTrue(candidatas.stream().allMatch(c -> c.getId() != null));
+        }
     }
 
     // =========================================================================

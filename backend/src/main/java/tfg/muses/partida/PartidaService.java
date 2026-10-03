@@ -57,6 +57,14 @@ public class PartidaService {
     @org.springframework.context.annotation.Lazy
     private PuntuacionService puntuacionService;
 
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private tfg.muses.bot.BotService botService;
+
+    @Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
+    private tfg.muses.sala.SalaRepository salaRepository;
+
     /**
      * Crear una nueva partida
      */
@@ -158,6 +166,37 @@ public class PartidaService {
         Jugador jugador = jugadorService.getById(jugadorId);
 
         partida.getSeleccionesRonda().put(jugadorId, cartaId);
+
+        if (messagingTemplate != null) {
+            CartaBase carta = cartaService.getById(cartaId);
+            Map<String, Object> seleccionEvento = new HashMap<>();
+            seleccionEvento.put("type", "SELECCION_CARTA");
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("jugadorId", jugadorId);
+            payload.put("jugadorNombre", jugador != null ? jugador.getNombre() : "Jugador " + jugadorId);
+            payload.put("jugadorNumero", jugador != null ? jugador.getNumeroJugador() : 1);
+            payload.put("cartaNombre", carta != null ? carta.getNombre() : "Carta " + cartaId);
+            payload.put("cartaId", cartaId);
+            if (carta instanceof CartaAccion ca && ca.getTipo() != null) {
+                payload.put("tipoAccion", ca.getTipo().name());
+                payload.put("prioridad", ca.getTipo().getPrioridad());
+            } else if (carta instanceof CartaInspiracion ci) {
+                payload.put("tipoAccion", "INSPIRACION");
+                payload.put("prioridad", 1);
+                payload.put("musaName", ci.getNombreMusa() != null ? ci.getNombreMusa().name() : null);
+            }
+            seleccionEvento.put("payload", payload);
+
+            messagingTemplate.convertAndSend("/topic/partida/" + partidaId + "/seleccion", (Object) seleccionEvento);
+            if (salaRepository != null) {
+                salaRepository.findByPartidaId(partidaId).ifPresent(sala -> {
+                    if (sala.getCodigo() != null) {
+                        messagingTemplate.convertAndSend("/topic/sala/" + sala.getCodigo() + "/accion", (Object) seleccionEvento);
+                    }
+                });
+            }
+        }
+
         gestionarSeleccionCartas(partida, jugador);
     }
 
@@ -230,6 +269,7 @@ public class PartidaService {
 
         partidaRepository.save(partida);
         messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/estado", partida);
+        ejecutarTurnosBotsSiAplica(partida);
         return tablero;
     }
 
@@ -254,6 +294,32 @@ public class PartidaService {
             }
             partidaRepository.save(partida);
             messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/estado", partida);
+            ejecutarTurnosBotsSiAplica(partida);
+        }
+    }
+
+    /**
+     * Ejecuta automáticamente el turno de todos los bots y jugadores desconectados
+     * que tengan pendiente seleccionar carta en la ronda actual.
+     */
+    public void ejecutarTurnosBotsSiAplica(Partida partida) {
+        if (partida == null || partida.getJugadores() == null || botService == null) {
+            return;
+        }
+        // Copia defensiva de la lista de jugadores para evitar ConcurrentModificationException
+        List<Jugador> jugadoresCopia = new ArrayList<>(partida.getJugadores());
+        for (Jugador j : jugadoresCopia) {
+            if (j != null && (j.isBot() || !j.isConectado())) {
+                Partida actual = (partida.getId() != null) ? getById(partida.getId()) : partida;
+                if (actual.getSeleccionesRonda() == null || !actual.getSeleccionesRonda().containsKey(j.getId())) {
+                    try {
+                        botService.ejecutarTurnoBot(actual, j);
+                    } catch (Exception e) {
+                        org.slf4j.LoggerFactory.getLogger(PartidaService.class)
+                                .error("Error al ejecutar turno de bot id={}: {}", j.getId(), e.getMessage());
+                    }
+                }
+            }
         }
     }
 
@@ -298,7 +364,12 @@ public class PartidaService {
                     Map<String, Integer> item = new HashMap<>();
                     item.put("tokens", recuento.getOrDefault(j, 0));
                     item.put("points", puntos.getOrDefault(j, 0));
-                    musaDesglose.put(nombreJugador, item);
+                    if (nombreJugador != null) {
+                        musaDesglose.put(nombreJugador, item);
+                    }
+                    if (j.getId() != null) {
+                        musaDesglose.put(String.valueOf(j.getId()), item);
+                    }
                 }
                 desglose.put(musa.getNombre().name(), musaDesglose);
             }

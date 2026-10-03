@@ -116,6 +116,70 @@ public class SalaService {
     }
 
     /**
+     * Añade un jugador bot a la sala identificada por el código dado.
+     *
+     * @param codigo código alfanumérico de la sala
+     * @return la sala actualizada con el nuevo bot
+     */
+    @Transactional
+    public Sala agregarBotASala(String codigo) {
+        Sala sala = obtenerPorCodigo(codigo);
+
+        if (sala.getEstado() != EstadoSala.ESPERANDO) {
+            throw new IllegalStateException("Solo se pueden agregar bots en estado ESPERANDO");
+        }
+        if (sala.getJugadores().size() >= sala.getMaxJugadores()) {
+            throw new IllegalStateException("La sala " + codigo + " ya está llena (" + sala.getMaxJugadores() + " jugadores)");
+        }
+
+        int num = sala.getJugadores().size() + 1;
+        Jugador bot = new Jugador();
+        bot.setNombre("Bot " + num);
+        bot.setNumeroJugador(num);
+        bot.setBot(true);
+        bot.setConectado(true);
+
+        Jugador guardado = jugadorService.create(bot);
+        sala.getJugadores().add(guardado);
+
+        Sala actualizada = salaRepository.save(sala);
+        log.info("Bot id={} '{}' añadido a la sala código={}", guardado.getId(), guardado.getNombre(), codigo);
+        notificarSala(actualizada);
+        return actualizada;
+    }
+
+    /**
+     * Rellena todos los huecos libres de la sala con jugadores Bot.
+     *
+     * @param codigo código alfanumérico de la sala
+     * @return la sala actualizada
+     */
+    @Transactional
+    public Sala llenarBotsASala(String codigo) {
+        Sala sala = obtenerPorCodigo(codigo);
+
+        if (sala.getEstado() != EstadoSala.ESPERANDO) {
+            throw new IllegalStateException("Solo se pueden agregar bots en estado ESPERANDO");
+        }
+        int huecos = sala.getMaxJugadores() - sala.getJugadores().size();
+        for (int i = 0; i < huecos; i++) {
+            int num = sala.getJugadores().size() + 1;
+            Jugador bot = new Jugador();
+            bot.setNombre("Bot " + num);
+            bot.setNumeroJugador(num);
+            bot.setBot(true);
+            bot.setConectado(true);
+            Jugador guardado = jugadorService.create(bot);
+            sala.getJugadores().add(guardado);
+        }
+
+        Sala actualizada = salaRepository.save(sala);
+        log.info("Sala código={} rellenada con bots hasta {} jugadores", codigo, actualizada.getJugadores().size());
+        notificarSala(actualizada);
+        return actualizada;
+    }
+
+    /**
      * Inicia la partida de una sala: crea la Partida, la vincula a la Sala
      * y cambia el estado a EN_CURSO.
      *
@@ -139,12 +203,13 @@ public class SalaService {
         partida.setJugadores(new ArrayList<>(sala.getJugadores()));
         Partida guardada = partidaService.create(partida);
 
-        // Inicializar tablero usando la lógica de la iteración 3
-        partidaService.iniciarPartida(guardada.getId());
-
+        // Vincular partida a la sala y guardar estado EN_CURSO antes de inicializar tablero
         sala.setPartida(guardada);
         sala.setEstado(EstadoSala.EN_CURSO);
         Sala actualizada = salaRepository.save(sala);
+
+        // Inicializar tablero usando la lógica de la iteración 3
+        partidaService.iniciarPartida(guardada.getId());
 
         log.info("Partida id={} iniciada en sala código={}", guardada.getId(), codigo);
         notificarSala(actualizada);

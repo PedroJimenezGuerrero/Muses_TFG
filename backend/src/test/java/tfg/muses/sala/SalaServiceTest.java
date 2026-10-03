@@ -197,6 +197,38 @@ public class SalaServiceTest {
             assertEquals(EstadoSala.EN_CURSO, resultado.getEstado());
             assertNotNull(resultado.getPartida());
         }
+
+        @Test
+        @DisplayName("Agregar bot a sala añade un jugador bot")
+        void agregarBotASala_agregaBotCorrectamente() {
+            when(jugadorService.create(any(Jugador.class))).thenAnswer(inv -> {
+                Jugador j = inv.getArgument(0);
+                setId(j, 999L);
+                return j;
+            });
+
+            Sala resultado = salaService.agregarBotASala("MUS-TEST");
+
+            assertEquals(2, resultado.getJugadores().size());
+            Jugador bot = resultado.getJugadores().get(1);
+            assertTrue(bot.isBot());
+            assertEquals("Bot 2", bot.getNombre());
+        }
+
+        @Test
+        @DisplayName("Llenar bots a sala completa todos los huecos libres")
+        void llenarBotsASala_completaTodosLosHuecos() {
+            when(jugadorService.create(any(Jugador.class))).thenAnswer(inv -> {
+                Jugador j = inv.getArgument(0);
+                setId(j, 1000L + j.getNumeroJugador());
+                return j;
+            });
+
+            Sala resultado = salaService.llenarBotsASala("MUS-TEST");
+
+            assertEquals(4, resultado.getJugadores().size());
+            assertEquals(3, resultado.getJugadores().stream().filter(Jugador::isBot).count());
+        }
     }
 
     // --- F35: Desconexiones ---

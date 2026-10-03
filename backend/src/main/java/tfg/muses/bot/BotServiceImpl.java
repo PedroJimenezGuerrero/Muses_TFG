@@ -120,6 +120,19 @@ public class BotServiceImpl implements BotService {
         }
 
         if (mejorCarta.getId() == null) {
+            if (mejorCarta instanceof CartaAccion ca && ca.getTipo() != null) {
+                if (cartaService != null) {
+                    try {
+                        CartaAccion res = cartaService.obtenerOCrearCartaAccion(ca.getTipo());
+                        if (res != null && res.getId() != null) {
+                            mejorCarta = res;
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+        }
+
+        if (mejorCarta.getId() == null) {
             log.error("Fallo crítico en ejecutarTurnoBot: la carta seleccionada [nombre='{}', clase={}] para el bot con id={} en la partida con id={}, ronda={} carece de identificador persistido (id es null). Imposible despachar a PartidaService.",
                     mejorCarta.getNombre(), mejorCarta.getClass().getSimpleName(), bot.getId(), partida.getId(), partida.getRondaActual());
             return;
@@ -295,20 +308,41 @@ public class BotServiceImpl implements BotService {
             }
         }
 
-        // Si existen cartas disponibles en el sistema, usar exclusivamente las reales
-        if (!accionesPorTipo.isEmpty()) {
-            candidatas.addAll(accionesPorTipo.values());
-        } else {
-            // Fallback sintético puramente en memoria SOLO si la BD está completamente vacía
-            // Cumplimiento estricto CQS: NUNCA se persiste en repositorio dentro de un método de consulta
-            for (TipoAccion tipo : TipoAccion.values()) {
-                CartaAccion ca = new CartaAccion();
-                ca.setTipo(tipo);
-                ca.setNombre(tipo.name());
-                ca.setDescripcion("Carta de acción: " + tipo.name());
-                candidatas.add(ca);
+        // Si faltan tipos de acción en disponibles, consultar o persistir mediante CartaService
+        for (TipoAccion tipo : TipoAccion.values()) {
+            if (!accionesPorTipo.containsKey(tipo)) {
+                CartaAccion ca = null;
+                if (cartaService != null) {
+                    try {
+                        ca = cartaService.obtenerOCrearCartaAccion(tipo);
+                    } catch (Exception ignored) {}
+                }
+                if (ca == null && cartaRepository != null) {
+                    try {
+                        ca = cartaRepository.findCartaAccionByTipo(tipo).orElse(null);
+                        if (ca == null) {
+                            CartaAccion nueva = new CartaAccion();
+                            nueva.setTipo(tipo);
+                            nueva.setNombre(tipo.name());
+                            nueva.setDescripcion("Carta de acción: " + tipo.name());
+                            ca = cartaRepository.save(nueva);
+                        }
+                    } catch (Exception ignored) {}
+                }
+                if (ca != null) {
+                    accionesPorTipo.put(tipo, ca);
+                } else {
+                    // Fallback puramente en memoria para tests unitarios aislados
+                    CartaAccion caMem = new CartaAccion();
+                    caMem.setTipo(tipo);
+                    caMem.setNombre(tipo.name());
+                    caMem.setDescripcion("Carta de acción: " + tipo.name());
+                    accionesPorTipo.put(tipo, caMem);
+                }
             }
         }
+
+        candidatas.addAll(accionesPorTipo.values());
 
         if (bot != null) {
             CartaInspiracion insp = bot.getCartaInspiracion();

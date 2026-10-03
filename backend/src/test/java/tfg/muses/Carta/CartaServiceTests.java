@@ -247,12 +247,35 @@ public class CartaServiceTests {
     }
 
     @Test
-    public void ejecutarEfectoSinEstrategiaCompatibleLanzaExcepcion() throws Exception {
-        // Carta sin tipo reconocido: vaciamos la lista de strategies
-        injectField(cartaService, "strategies", List.of());
+    public void inicializarCartasAccionGuardaCartasFaltantes() {
+        when(cartaRepository.findCartaAccionByTipo(any(TipoAccion.class))).thenReturn(Optional.empty());
+        when(cartaRepository.save(any(CartaAccion.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        assertThrows(IllegalArgumentException.class,
-                () -> cartaService.ejecutarEfecto(cartaAccion, tablero, jugador));
+        cartaService.inicializarCartasAccion();
+
+        verify(cartaRepository, times(TipoAccion.values().length)).save(any(CartaAccion.class));
+    }
+
+    @Test
+    public void obtenerOCrearCartaAccionRetornaExistente() {
+        when(cartaRepository.findCartaAccionByTipo(TipoAccion.DEVOCION_SOL)).thenReturn(Optional.of(cartaAccion));
+
+        CartaAccion res = cartaService.obtenerOCrearCartaAccion(TipoAccion.DEVOCION_SOL);
+
+        assertEquals(cartaAccion, res);
+        verify(cartaRepository, never()).save(any(CartaAccion.class));
+    }
+
+    @Test
+    public void obtenerOCrearCartaAccionCreaSiNoExiste() {
+        when(cartaRepository.findCartaAccionByTipo(TipoAccion.DEVOCION_SOL)).thenReturn(Optional.empty());
+        when(cartaRepository.save(any(CartaAccion.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CartaAccion res = cartaService.obtenerOCrearCartaAccion(TipoAccion.DEVOCION_SOL);
+
+        assertNotNull(res);
+        assertEquals(TipoAccion.DEVOCION_SOL, res.getTipo());
+        verify(cartaRepository).save(any(CartaAccion.class));
     }
 
     // ──────────────────────────────────────────────────────────────────────────

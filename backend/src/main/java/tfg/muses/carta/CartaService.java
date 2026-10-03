@@ -4,6 +4,7 @@ import java.util.List;
 import tfg.muses.carta.strategy.CartaEffectStrategy;
 import tfg.muses.jugador.Jugador;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +18,31 @@ public class CartaService {
     private CartaRepository cartaRepository;
 
     @Autowired
+    @org.springframework.context.annotation.Lazy
     private PartidaService partidaService;
+
+    @PostConstruct
+    public void inicializarCartasAccion() {
+        for (TipoAccion tipo : TipoAccion.values()) {
+            if (cartaRepository.findCartaAccionByTipo(tipo).isEmpty()) {
+                CartaAccion ca = new CartaAccion();
+                ca.setTipo(tipo);
+                ca.setNombre(tipo.name());
+                ca.setDescripcion("Carta de acción: " + tipo.name());
+                cartaRepository.save(ca);
+            }
+        }
+    }
+
+    public CartaAccion obtenerOCrearCartaAccion(TipoAccion tipo) {
+        return cartaRepository.findCartaAccionByTipo(tipo).orElseGet(() -> {
+            CartaAccion ca = new CartaAccion();
+            ca.setTipo(tipo);
+            ca.setNombre(tipo.name());
+            ca.setDescripcion("Carta de acción: " + tipo.name());
+            return cartaRepository.save(ca);
+        });
+    }
 
     /**
      * Crear una nueva carta

@@ -62,7 +62,7 @@ public class SalaController {
         if (anfitrion == null) {
             anfitrion = new Jugador();
             String nombre = (req.anfitrionNombre != null && !req.anfitrionNombre.isBlank())
-                    ? req.anfitrionNombre : "Anfitrión";
+                    ? req.anfitrionNombre : "Jugador 1";
             anfitrion.setNombre(nombre);
             anfitrion.setNumeroJugador(1);
             anfitrion = jugadorService.create(anfitrion);
@@ -80,13 +80,26 @@ public class SalaController {
         }
         if (jugador == null) {
             jugador = new Jugador();
+            int num = salaExistente.getJugadores().size() + 1;
             String nombre = (req.jugadorNombre != null && !req.jugadorNombre.isBlank())
-                    ? req.jugadorNombre : "Invitado";
+                    ? req.jugadorNombre : "Jugador " + num;
             jugador.setNombre(nombre);
-            jugador.setNumeroJugador(salaExistente.getJugadores().size() + 1);
+            jugador.setNumeroJugador(num);
             jugador = jugadorService.create(jugador);
         }
         Sala sala = salaService.unirseASala(codigo, jugador);
+        return ResponseEntity.ok(sala);
+    }
+
+    @PostMapping("/{codigo}/agregar-bot")
+    public ResponseEntity<Sala> agregarBot(@PathVariable String codigo) {
+        Sala sala = salaService.agregarBotASala(codigo);
+        return ResponseEntity.ok(sala);
+    }
+
+    @PostMapping("/{codigo}/llenar-bots")
+    public ResponseEntity<Sala> llenarBots(@PathVariable String codigo) {
+        Sala sala = salaService.llenarBotsASala(codigo);
         return ResponseEntity.ok(sala);
     }
 
