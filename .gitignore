@@ -29,6 +29,6 @@ replay_pid*
 
 # local settings
 .vscode/*
+.idea/*
+*.iml
 .env
-
-.agents
