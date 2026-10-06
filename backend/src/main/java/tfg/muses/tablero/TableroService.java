@@ -293,7 +293,7 @@ public class TableroService {
 
     // Rotación en el eje horizontal, parte de abajo
     private List<Musa> rotacionHorizontalAbajo(List<Musa> grid) {
-        int[] indices = { 4, 3, 0, 1, 2, 5 };
+        int[] indices = { 4, 3, 6, 7, 8, 5 };
         grid = rotacionGeneral(grid, indices);
         return grid;
     }

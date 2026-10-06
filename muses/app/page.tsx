@@ -129,7 +129,7 @@ const GamePage = observer(() => {
 
             {/* Center Arena: 3x3 Board with Orbit and Action Resolution Stack */}
             {store.tablero && (
-              <section className="flex-1 flex flex-col items-center justify-center relative z-10 -translate-y-8 sm:-translate-y-12">
+              <section className="flex-1 flex flex-col items-center justify-center relative z-10 -translate-y-2 sm:-translate-y-4">
                 <Board
                   tablero={store.tablero}
                   hoveredCard={store.hoveredCard}
@@ -146,52 +146,52 @@ const GamePage = observer(() => {
             )}
 
             {/* Right Side Info: Action Resolution Log & Guide */}
-            <aside className="hidden xl:flex w-64 max-w-xs shrink-0 flex-col gap-3 z-20 -translate-y-4 sm:-translate-y-8">
+            <aside className="hidden xl:flex w-72 max-w-xs shrink-0 flex-col gap-3 z-20 -translate-y-2 sm:-translate-y-4">
               {/* Turn Action Resolution Log */}
               {store.actionLogs.length > 0 && (
-                <div className="p-3 rounded-2xl bg-zinc-950/80 border border-amber-500/30 backdrop-blur-md shadow-lg flex flex-col gap-2 animate-in fade-in slide-in-from-right-3 duration-300">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 flex items-center gap-1.5 border-b border-amber-500/20 pb-1">
-                    <History className="w-3.5 h-3.5" />
+                <div className="p-3.5 rounded-2xl bg-zinc-950/85 border border-amber-500/30 backdrop-blur-md shadow-lg flex flex-col gap-2.5 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <span className="text-xs uppercase font-bold tracking-wider text-amber-400 flex items-center gap-1.5 border-b border-amber-500/20 pb-1.5">
+                    <History className="w-4 h-4" />
                     Resolución de la Ronda
                   </span>
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {store.actionLogs.map((log, idx) => (
                       <div
                         key={idx}
-                        className="p-2 rounded-xl bg-zinc-900/70 border border-zinc-800 text-[11px] flex flex-col gap-0.5"
+                        className="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800 text-xs flex flex-col gap-1"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-amber-200">{log.jugadorNombre}</span>
-                          <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono">
+                          <span className="font-bold text-amber-200 text-xs">{log.jugadorNombre}</span>
+                          <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-semibold">
                             {log.cartaNombre}
                           </span>
                         </div>
-                        <span className="text-zinc-400 text-[10px] leading-tight">{log.detalle}</span>
+                        <span className="text-zinc-300 text-xs leading-tight">{log.detalle}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              <div className="p-3.5 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 backdrop-blur-md shadow-lg flex flex-col gap-2 text-xs">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400/90 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <div className="p-4 rounded-2xl bg-zinc-950/85 border border-zinc-800/80 backdrop-blur-md shadow-lg flex flex-col gap-2.5 text-sm">
+                <span className="text-xs uppercase font-bold tracking-wider text-amber-400/90 flex items-center gap-1.5 border-b border-zinc-800/80 pb-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
                   Guía Rápida
                 </span>
-                <p className="text-zinc-400 leading-relaxed text-[11px]">
+                <p className="text-zinc-300 leading-relaxed text-xs">
                   Pasa el ratón sobre cualquier musa para consultar sus puntos o sobre tus cartas para ver sus efectos.
                 </p>
-                <div className="border-t border-zinc-800/80 pt-2 space-y-1 text-[10px] text-zinc-400">
+                <div className="border-t border-zinc-800/80 pt-2.5 space-y-1.5 text-xs text-zinc-300">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)] shrink-0" />
                     <span>Sol: Coloca 2 tokens o rota</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_6px_rgba(99,102,241,0.8)]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-[0_0_6px_rgba(99,102,241,0.8)] shrink-0" />
                     <span>Luna: Coloca 2 tokens o rota</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_6px_rgba(192,132,252,0.8)]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_6px_rgba(192,132,252,0.8)] shrink-0" />
                     <span>Inspiración: 1 token geométrico</span>
                   </div>
                 </div>

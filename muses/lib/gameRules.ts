@@ -67,11 +67,11 @@ export const REVOLUTION_CYCLES: Record<number, number[]> = {
   0: [4, 0, 1, 2, 5, 8], // Diagonal dominant upper
   1: [4, 1, 2, 5, 8, 7], // Vertical right
   2: [4, 2, 5, 8, 7, 6], // Diagonal secondary lower
-  3: [4, 5, 2, 1, 0, 3], // Horizontal lower
+  3: [4, 5, 8, 7, 6, 3], // Horizontal lower (cells: 4, 5, 8, 7, 6, 3)
   4: [4, 8, 7, 6, 3, 0], // Diagonal dominant lower
   5: [4, 7, 6, 3, 0, 1], // Vertical left
   6: [4, 6, 3, 0, 1, 2], // Diagonal secondary upper
-  7: [4, 3, 0, 1, 2, 5], // Horizontal upper
+  7: [4, 3, 0, 1, 2, 5], // Horizontal upper (cells: 4, 3, 0, 1, 2, 5)
 };
 
 /**
@@ -81,7 +81,7 @@ export const REVOLUTION_STATIONARY: Record<number, number[]> = {
   0: [3, 6, 7],
   1: [0, 3, 6],
   2: [0, 1, 3],
-  3: [6, 7, 8],
+  3: [0, 1, 2],
   4: [1, 2, 5],
   5: [2, 5, 8],
   6: [5, 7, 8],

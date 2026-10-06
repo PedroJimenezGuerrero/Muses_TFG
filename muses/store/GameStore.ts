@@ -1676,7 +1676,22 @@ export class GameStore {
     }
 
     const currentCards = [...this.cards];
-    const actionsToExecute = [...actions].sort((a, b) => a.prioridad - b.prioridad);
+    
+    // Regla oficial Muses: La acción seleccionada por más jugadores se resuelve primero.
+    // En caso de empate en votos, desempata la prioridad intrínseca (Inspiración 1 -> Devoción Sol 2 -> Rev Sol 3 -> Rev Luna 4 -> Dev Luna 5).
+    const actionCounts: Record<string, number> = {};
+    for (const act of actions) {
+      actionCounts[act.tipoAccion] = (actionCounts[act.tipoAccion] || 0) + 1;
+    }
+
+    const actionsToExecute = [...actions].sort((a, b) => {
+      const countA = actionCounts[a.tipoAccion] || 0;
+      const countB = actionCounts[b.tipoAccion] || 0;
+      if (countA !== countB) {
+        return countB - countA;
+      }
+      return a.prioridad - b.prioridad;
+    });
     runInAction(() => {
       this.pendingActions = [...actionsToExecute];
       this.currentExecutingAction = null;

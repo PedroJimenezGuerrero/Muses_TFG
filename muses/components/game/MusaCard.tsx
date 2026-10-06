@@ -46,6 +46,7 @@ export const MusaCard = observer<MusaCardProps>(({
 
   // Compute highlight styling
   let highlightStyles = '';
+  let contentOpacity = '';
   if (isReceivingTokens) {
     highlightStyles = 'ring-4 ring-amber-300 shadow-[0_0_40px_rgba(251,191,36,1)] scale-110 z-40 animate-pulse';
   } else if (isRevolutionAnimating) {
@@ -59,7 +60,7 @@ export const MusaCard = observer<MusaCardProps>(({
   } else if (isRevolutionMember === true) {
     highlightStyles = 'ring-3 ring-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.75)] z-10';
   } else if (isRevolutionMember === false) {
-    highlightStyles = 'opacity-65';
+    contentOpacity = 'opacity-40';
   }
 
   return (
@@ -82,7 +83,7 @@ export const MusaCard = observer<MusaCardProps>(({
       )}
 
       {/* Full-bleed Illustration */}
-      <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black/60">
+      <div className={`relative w-full h-full rounded-2xl overflow-hidden bg-black/60 transition-opacity duration-300 ${contentOpacity}`}>
         {!imgError ? (
           <img
             src={`/assets/musas/${musa.nombre.toLowerCase()}.png`}
@@ -123,33 +124,28 @@ export const MusaCard = observer<MusaCardProps>(({
 
       {/* Floating Info Tooltip on Hover */}
       {showTooltip && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 p-3 rounded-2xl bg-zinc-950/95 border border-amber-500/40 shadow-2xl backdrop-blur-md z-50 text-left pointer-events-none animate-in fade-in zoom-in-95 duration-200">
-          <div className="flex items-center justify-between border-b border-amber-500/20 pb-1.5 mb-1.5">
-            <div>
-              <span className="font-serif font-bold text-sm text-amber-200 block leading-tight">
-                {musa.nombre}
-              </span>
-              <span className="text-[10px] text-amber-400/80 font-sans tracking-tight">
-                {meta.domain}
-              </span>
-            </div>
-            <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-bold">
-              {meta.tipoInspiracion}
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-52 p-3.5 rounded-2xl bg-zinc-950 border border-amber-500/60 shadow-2xl backdrop-blur-md z-50 text-left pointer-events-none opacity-100 animate-in fade-in zoom-in-95 duration-200">
+          <div className="border-b border-amber-500/30 pb-1.5 mb-2">
+            <span className="font-serif font-bold text-base text-amber-200 block leading-tight">
+              {musa.nombre}
+            </span>
+            <span className="text-xs text-amber-400/90 font-sans tracking-tight">
+              {meta.domain}
             </span>
           </div>
 
-          <div className="grid grid-cols-3 gap-1 text-center bg-black/40 rounded-xl p-1.5 border border-white/5">
+          <div className="grid grid-cols-3 gap-1.5 text-center bg-black/60 rounded-xl p-2 border border-amber-500/20">
             <div className="flex flex-col">
-              <span className="text-[9px] text-zinc-400 uppercase font-semibold">1º</span>
-              <span className="text-xs font-bold text-amber-400 font-mono">{nivel1} pts</span>
+              <span className="text-[10px] text-zinc-400 uppercase font-semibold">1º</span>
+              <span className="text-sm font-bold text-amber-400 font-mono">{nivel1} pts</span>
             </div>
             <div className="flex flex-col border-x border-zinc-800">
-              <span className="text-[9px] text-zinc-400 uppercase font-semibold">2º</span>
-              <span className="text-xs font-bold text-zinc-200 font-mono">{nivel2} pts</span>
+              <span className="text-[10px] text-zinc-400 uppercase font-semibold">2º</span>
+              <span className="text-sm font-bold text-zinc-100 font-mono">{nivel2} pts</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[9px] text-zinc-400 uppercase font-semibold">3º</span>
-              <span className="text-xs font-bold text-amber-600/80 font-mono">{nivel3} pts</span>
+              <span className="text-[10px] text-zinc-400 uppercase font-semibold">3º</span>
+              <span className="text-sm font-bold text-amber-500 font-mono">{nivel3} pts</span>
             </div>
           </div>
         </div>

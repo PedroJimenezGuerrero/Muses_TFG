@@ -47,23 +47,23 @@ export const StatusPanel = observer<StatusPanelProps>(({
       className={`w-full flex flex-col gap-3 select-none ${className}`}
     >
       {/* Top Header Card: Round & Connection */}
-      <div className="p-3.5 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 backdrop-blur-md shadow-lg flex flex-col gap-2.5">
+      <div className="p-4 rounded-2xl bg-zinc-950/85 border border-zinc-800/80 backdrop-blur-md shadow-lg flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <span className="font-serif text-base font-bold tracking-wide text-amber-300 drop-shadow-sm">
+          <span className="font-serif text-lg font-bold tracking-wide text-amber-300 drop-shadow-sm">
             Ronda {partida.rondaActual} de {maxRondas}
           </span>
 
           {/* Connection Status Badge */}
           <div
             data-testid="connection-status"
-            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide border ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide border ${
               isConnected
                 ? 'bg-emerald-950/50 text-emerald-400 border-emerald-700/50'
                 : 'bg-red-950/60 text-red-400 border-red-700/50 animate-pulse'
             }`}
           >
             <span
-              className={`w-2 h-2 rounded-full ${
+              className={`w-2.5 h-2.5 rounded-full ${
                 isConnected ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-red-400'
               }`}
             />
@@ -72,21 +72,21 @@ export const StatusPanel = observer<StatusPanelProps>(({
         </div>
 
         {isFinalRound && (
-          <span className="px-2.5 py-0.5 rounded-full bg-red-600/90 text-white text-center font-bold text-[10px] uppercase tracking-wider animate-pulse border border-red-400/50 shadow-[0_0_10px_rgba(220,38,38,0.7)]">
+          <span className="px-3 py-1 rounded-full bg-red-600/90 text-white text-center font-bold text-xs uppercase tracking-wider animate-pulse border border-red-400/50 shadow-[0_0_10px_rgba(220,38,38,0.7)]">
             ¡Última Ronda!
           </span>
         )}
 
         {/* Turn Status Message */}
         {waitingForPlayers && (
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-300 text-[11px] font-medium animate-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-300 text-xs font-medium animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
             <span>Esperando elecciones de los jugadores...</span>
           </div>
         )}
 
         {/* Round Progression Timeline: 9 Steps */}
-        <div className="flex items-center justify-between gap-1 pt-1">
+        <div className="flex items-center justify-between gap-1.5 pt-1">
           {Array.from({ length: maxRondas }, (_, i) => {
             const step = i + 1;
             const isActive = step === partida.rondaActual;
@@ -98,19 +98,19 @@ export const StatusPanel = observer<StatusPanelProps>(({
                 data-testid={`round-step-${step}`}
                 data-active={isActive ? 'true' : 'false'}
                 data-completed={isCompleted ? 'true' : 'false'}
-                className="flex-1 flex flex-col items-center gap-0.5"
+                className="flex-1 flex flex-col items-center gap-1"
               >
                 <div
-                  className={`w-full h-1.5 rounded-full transition-all duration-300 ${
+                  className={`w-full rounded-full transition-all duration-300 ${
                     isActive
-                      ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] h-2'
+                      ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] h-2.5'
                       : isCompleted
-                      ? 'bg-amber-600/70'
-                      : 'bg-zinc-800'
+                      ? 'bg-amber-600/70 h-1.5'
+                      : 'bg-zinc-800 h-1.5'
                   }`}
                 />
                 <span
-                  className={`text-[9px] font-mono transition-colors ${
+                  className={`text-[10px] font-mono transition-colors ${
                     isActive
                       ? 'text-amber-300 font-bold'
                       : isCompleted
@@ -127,12 +127,12 @@ export const StatusPanel = observer<StatusPanelProps>(({
       </div>
 
       {/* Players List Card */}
-      <div className="p-3 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 backdrop-blur-md shadow-lg flex flex-col gap-2">
-        <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 px-1">
+      <div className="p-4 rounded-2xl bg-zinc-950/85 border border-zinc-800/80 backdrop-blur-md shadow-lg flex flex-col gap-2.5">
+        <span className="text-xs uppercase font-bold tracking-wider text-zinc-300 px-1">
           Jugadores en Partida
         </span>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           {partida.jugadores.map((jugador) => {
             const jId = jugador.id ?? jugador.numeroJugador ?? 1;
             const pNum = jugador.numeroJugador ?? jugador.id ?? 1;
@@ -148,27 +148,27 @@ export const StatusPanel = observer<StatusPanelProps>(({
                 key={jId}
                 data-testid={`player-badge-${jId}`}
                 data-player-color={colorConfig.name}
-                className={`flex items-center justify-between p-2 rounded-xl border ${colorConfig.bg} ${colorConfig.border} transition-all`}
+                className={`flex items-center justify-between p-2.5 rounded-xl border ${colorConfig.bg} ${colorConfig.border} transition-all`}
               >
-                <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full border ${colorConfig.border} ${colorConfig.text}`} />
-                  <span className="font-semibold text-xs text-zinc-100 truncate max-w-[120px]">
+                <div className="flex items-center gap-2.5">
+                  <span className={`w-3 h-3 rounded-full border ${colorConfig.border} ${colorConfig.text}`} />
+                  <span className="font-semibold text-sm text-zinc-100 truncate max-w-[130px]">
                     {jugador.nombre}
-                    {isMe && <span className="text-amber-400 font-normal ml-1 text-[11px]">(Tú)</span>}
+                    {isMe && <span className="text-amber-400 font-normal ml-1.5 text-xs">(Tú)</span>}
                   </span>
                 </div>
 
                 <div
                   data-testid={`token-reserve-${jId}`}
                   data-reserve-exhausted={isExhausted ? 'true' : undefined}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-mono font-bold border ${
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-mono font-bold border ${
                     isExhausted
                       ? 'bg-red-950/60 text-red-400 border-red-700/60'
                       : 'bg-zinc-950/70 text-amber-200 border-amber-500/30'
                   }`}
                 >
                   <span>{remainingTokens}</span>
-                  <span className="text-[9px] text-zinc-400 font-sans">tk</span>
+                  <span className="text-xs text-zinc-400 font-sans">tk</span>
                 </div>
               </div>
             );
