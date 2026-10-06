@@ -99,7 +99,7 @@ test.describe('Muses Game Lifecycle & Interaction Flow (Tier 4 E2E)', () => {
 
     // 3. Verify HUD shows Round 1 and starting reserve of 20 tokens
     await expect(page.getByText(/ronda 1 de 9/i)).toBeVisible();
-    await expect(page.getByTestId('token-reserve-1')).toHaveTextContent('20');
+    await expect(page.getByTestId('token-reserve-1')).toContainText('20');
 
     // 4. Verify 5 cards in player hand (4 common + 1 inspiration)
     await expect(page.getByRole('button', { name: /devoción solar/i })).toBeVisible();

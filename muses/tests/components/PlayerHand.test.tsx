@@ -8,7 +8,6 @@ import {
   CartaInspiracion,
 } from '../fixtures/mockGameState';
 
-// @ts-expect-error - PlayerHand component implemented in Milestone M2
 import PlayerHand from '@/components/game/PlayerHand';
 
 describe('PlayerHand Component (F22: Fixed Bottom Hand, F27: Interactive Selection, F29: SVG Cards)', () => {

@@ -1,13 +1,12 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import {
   createMockTablero,
   createMockPlayerHand,
   createMockPartida,
-  CartaAccion,
-  CartaInspiracion,
 } from '../fixtures/mockGameState';
+import { CartaAccion, CartaInspiracion } from '@/types/game';
 import Board from '@/components/game/Board';
 import MusaCard from '@/components/game/MusaCard';
 import AstroOrbit from '@/components/game/AstroOrbit';

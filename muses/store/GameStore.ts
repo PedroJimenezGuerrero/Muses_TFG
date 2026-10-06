@@ -3,11 +3,13 @@ import {
   Tablero,
   Partida,
   Jugador,
+  Musa,
   TipoMusa,
   AnyCard,
   CartaAccion,
   CartaInspiracion,
   Usuario,
+  Estadisticas,
   Sala,
   MUSAS_METADATA,
 } from '@/types/game';
@@ -55,6 +57,7 @@ export interface PlannedAction {
   astroPos?: number;
   musaName?: TipoMusa;
   rawCard?: AnyCard;
+  detalle?: string;
 }
 
 export function safeClone<T>(obj: T): T {
@@ -775,9 +778,10 @@ export class GameStore {
 
     this.partida.jugadores.forEach((j) => {
       const isBotPlayer = j.esBot || (j as any).bot || j.nombre?.toLowerCase().includes('bot');
-      if (isBotPlayer && !this.seleccionesRonda[j.id]) {
+      const pId = j.id ?? j.numeroJugador;
+      if (isBotPlayer && !this.seleccionesRonda[pId]) {
         const botAction = this.generarAccionBot(j, this.tablero!, this.partida!.rondaActual);
-        this.seleccionesRonda[j.id] = botAction;
+        this.seleccionesRonda[pId] = botAction;
         if (this.sala?.codigo) {
           this.enviarAccionSala(this.sala.codigo, {
             type: 'SELECCION_CARTA',
@@ -791,22 +795,24 @@ export class GameStore {
   generarAccionBot(bot: Jugador, tablero: Tablero, ronda: number): PlannedAction {
     const solPos = tablero.solPos;
     const lunaPos = tablero.lunaPos;
+    const botKey = bot.id ?? bot.numeroJugador;
 
     const computeDeltaPoints = (musa: Musa, extraTokens: number): number => {
       if (!musa) return 0;
-      const meta = MUSAS_METADATA[musa.nombre] || MUSAS_METADATA.CLIO;
+      const meta = MUSAS_METADATA[musa.nombre as TipoMusa] || MUSAS_METADATA.CLIO;
       const playerList = this.partida?.jugadores || [bot];
       const allTokensByPlayer: { key: number; count: number }[] = [];
       playerList.forEach((j) => {
+        const pKey = j.id ?? j.numeroJugador;
         const count = (musa.tokensColocados || []).filter(
           (t: any) => (t.jugador?.id ?? t.jugadorId) === j.id || (t.jugador?.numeroJugador ?? t.numeroJugador) === j.numeroJugador
         ).length;
-        allTokensByPlayer.push({ key: j.id, count });
+        allTokensByPlayer.push({ key: pKey, count });
       });
 
       const calcPts = (tokensList: { key: number; count: number }[]) => {
         const sorted = [...tokensList].sort((a, b) => b.count - a.count);
-        const botEntry = sorted.find((e) => e.key === bot.id);
+        const botEntry = sorted.find((e) => e.key === botKey);
         if (!botEntry || botEntry.count === 0) return 0;
 
         const botCount = botEntry.count;
@@ -828,7 +834,7 @@ export class GameStore {
       };
 
       const ptsBefore = calcPts(allTokensByPlayer);
-      const tokensAfter = allTokensByPlayer.map((p) => (p.key === bot.id ? { ...p, count: p.count + extraTokens } : p));
+      const tokensAfter = allTokensByPlayer.map((p) => (p.key === botKey ? { ...p, count: p.count + extraTokens } : p));
       const ptsAfter = calcPts(tokensAfter);
       return Math.max(0, ptsAfter - ptsBefore);
     };
@@ -837,38 +843,40 @@ export class GameStore {
 
     // Check inspiration card
     if (bot.cartaInspiracion && !bot.cartaInspiracion.usada) {
-      const musaName = bot.cartaInspiracion.nombreMusa;
-      const meta = MUSAS_METADATA[musaName];
-      const isVertices = solPos % 2 === 0;
-      const isCompatible = (meta?.tipoInspiracion === 'VERTICES' && isVertices) ||
-                           (meta?.tipoInspiracion === 'LADOS' && !isVertices);
+      const musaName = (bot.cartaInspiracion.nombreMusa || bot.cartaInspiracion.tipoMusa) as TipoMusa | undefined;
+      if (musaName) {
+        const meta = MUSAS_METADATA[musaName];
+        const isVertices = solPos % 2 === 0;
+        const isCompatible = (meta?.tipoInspiracion === 'VERTICES' && isVertices) ||
+                             (meta?.tipoInspiracion === 'LADOS' && !isVertices);
 
-      if (isCompatible) {
-        const targetCells = getInspirationTargetCells(musaName, solPos);
-        let inspDelta = 0;
-        targetCells.forEach((cIdx) => {
-          const targetMusa = tablero.grid[cIdx];
-          if (targetMusa) inspDelta += computeDeltaPoints(targetMusa, 2);
-        });
-        const n1 = meta?.nivel1 || 7;
-        const urgency = meta?.tipoInspiracion === 'LADOS'
-          ? (ronda >= 8 ? 20 : (ronda === 6 ? 10 : (ronda === 4 ? 5 : 2)))
-          : (ronda >= 9 ? 20 : (ronda === 7 ? 10 : (ronda === 5 ? 5 : 2)));
+        if (isCompatible) {
+          const targetCells = getInspirationTargetCells(musaName, solPos);
+          let inspDelta = 0;
+          targetCells.forEach((cIdx) => {
+            const targetMusa = tablero.grid[cIdx];
+            if (targetMusa) inspDelta += computeDeltaPoints(targetMusa, 2);
+          });
+          const n1 = meta?.nivel1 || 7;
+          const urgency = meta?.tipoInspiracion === 'LADOS'
+            ? (ronda >= 8 ? 20 : (ronda === 6 ? 10 : (ronda === 4 ? 5 : 2)))
+            : (ronda >= 9 ? 20 : (ronda === 7 ? 10 : (ronda === 5 ? 5 : 2)));
 
-        choices.push({
-          action: {
-            jugador: safeClone(bot),
-            jugadorId: bot.id,
-            jugadorNumero: bot.numeroJugador,
-            jugadorNombre: bot.nombre,
-            cartaNombre: `Inspiración (${meta?.displayName || musaName})`,
-            tipoAccion: 'INSPIRACION',
-            prioridad: 1,
-            musaName,
-            rawCard: safeClone(bot.cartaInspiracion),
-          },
-          weight: 100 + n1 + urgency + (10 * inspDelta),
-        });
+          choices.push({
+            action: {
+              jugador: safeClone(bot),
+              jugadorId: bot.id ?? bot.numeroJugador,
+              jugadorNumero: bot.numeroJugador,
+              jugadorNombre: bot.nombre,
+              cartaNombre: `Inspiración (${meta?.displayName || musaName})`,
+              tipoAccion: 'INSPIRACION',
+              prioridad: 1,
+              musaName,
+              rawCard: safeClone(bot.cartaInspiracion),
+            },
+            weight: 100 + n1 + urgency + (10 * inspDelta),
+          });
+        }
       }
     }
 
@@ -891,7 +899,7 @@ export class GameStore {
       {
         action: {
           jugador: safeClone(bot),
-          jugadorId: bot.id,
+          jugadorId: bot.id ?? bot.numeroJugador,
           jugadorNumero: bot.numeroJugador,
           jugadorNombre: bot.nombre,
           cartaNombre: 'Devoción Solar',
@@ -904,7 +912,7 @@ export class GameStore {
       {
         action: {
           jugador: safeClone(bot),
-          jugadorId: bot.id,
+          jugadorId: bot.id ?? bot.numeroJugador,
           jugadorNumero: bot.numeroJugador,
           jugadorNombre: bot.nombre,
           cartaNombre: 'Devoción Lunar',
@@ -917,7 +925,7 @@ export class GameStore {
       {
         action: {
           jugador: safeClone(bot),
-          jugadorId: bot.id,
+          jugadorId: bot.id ?? bot.numeroJugador,
           jugadorNumero: bot.numeroJugador,
           jugadorNombre: bot.nombre,
           cartaNombre: 'Revolución Solar',
@@ -930,7 +938,7 @@ export class GameStore {
       {
         action: {
           jugador: safeClone(bot),
-          jugadorId: bot.id,
+          jugadorId: bot.id ?? bot.numeroJugador,
           jugadorNumero: bot.numeroJugador,
           jugadorNombre: bot.nombre,
           cartaNombre: 'Revolución Lunar',
@@ -1530,9 +1538,10 @@ export class GameStore {
         prioridad = 1;
       }
 
+      const myKey = myJugador.id ?? myJugador.numeroJugador;
       const plannedAction: PlannedAction = {
         jugador: safeClone(myJugador),
-        jugadorId: myJugador.id,
+        jugadorId: myKey,
         jugadorNumero: myJugador.numeroJugador,
         jugadorNombre: myJugador.nombre,
         cartaNombre,
@@ -1548,15 +1557,16 @@ export class GameStore {
         this.isSubmitting = true;
         this.seleccionesRonda = {
           ...this.seleccionesRonda,
-          [myJugador.id]: plannedAction,
+          [myKey]: plannedAction,
         };
 
         // If I am host, also generate bot selections for any bots in the match that haven't selected yet!
         if (this.isAnfitrion) {
           currentPartida.jugadores.forEach((j) => {
-            if ((j.esBot || j.nombre?.startsWith('Bot')) && !this.seleccionesRonda[j.id]) {
+            const botKey = j.id ?? j.numeroJugador;
+            if ((j.esBot || j.nombre?.startsWith('Bot')) && !this.seleccionesRonda[botKey]) {
               const botAction = this.generarAccionBot(j, currentTablero, currentPartida.rondaActual);
-              this.seleccionesRonda[j.id] = botAction;
+              this.seleccionesRonda[botKey] = botAction;
               this.enviarAccionSala(this.sala!.codigo, {
                 type: 'SELECCION_CARTA',
                 payload: safeClone(botAction),
@@ -1575,7 +1585,7 @@ export class GameStore {
       // Optional backend REST notification
       try {
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
-        fetch(`${backendUrl}/partida/${currentPartida.id}/seleccionar-carta?jugadorId=${myJugador.id}&cartaId=${card.id}`, {
+        fetch(`${backendUrl}/partida/${currentPartida.id}/seleccionar-carta?jugadorId=${myKey}&cartaId=${card.id}`, {
           method: 'POST'
         }).catch(() => {});
       } catch (e) {}
@@ -1593,6 +1603,7 @@ export class GameStore {
 
     // --- Single player against bots (offline / fallback) ---
     const activePlayer = currentPartida.jugadores[0]; // Active player
+    const activePlayerId = activePlayer.id ?? activePlayer.numeroJugador;
     const bot1 = currentPartida.jugadores[1]; // Atenea
     const bot2 = currentPartida.jugadores[2]; // Hermes
 
@@ -1601,7 +1612,7 @@ export class GameStore {
     if (cardType === 'DEVOCION_SOL') {
       actionsToExecute.push({
         jugador: activePlayer,
-        jugadorId: activePlayer.id,
+        jugadorId: activePlayerId,
         jugadorNumero: 1,
         jugadorNombre: activePlayer.nombre,
         cartaNombre: 'Devoción Solar',
@@ -1612,7 +1623,7 @@ export class GameStore {
     } else if (cardType === 'DEVOCION_LUNA') {
       actionsToExecute.push({
         jugador: activePlayer,
-        jugadorId: activePlayer.id,
+        jugadorId: activePlayerId,
         jugadorNumero: 1,
         jugadorNombre: activePlayer.nombre,
         cartaNombre: 'Devoción Lunar',
@@ -1623,7 +1634,7 @@ export class GameStore {
     } else if (cardType === 'REVOLUCION_SOL') {
       actionsToExecute.push({
         jugador: activePlayer,
-        jugadorId: activePlayer.id,
+        jugadorId: activePlayerId,
         jugadorNumero: 1,
         jugadorNombre: activePlayer.nombre,
         cartaNombre: 'Revolución Solar',
@@ -1634,7 +1645,7 @@ export class GameStore {
     } else if (cardType === 'REVOLUCION_LUNA') {
       actionsToExecute.push({
         jugador: activePlayer,
-        jugadorId: activePlayer.id,
+        jugadorId: activePlayerId,
         jugadorNumero: 1,
         jugadorNombre: activePlayer.nombre,
         cartaNombre: 'Revolución Lunar',
@@ -1646,7 +1657,7 @@ export class GameStore {
       const musaName = ((card as any).tipoMusa || (card as any).nombreMusa) as TipoMusa;
       actionsToExecute.push({
         jugador: activePlayer,
-        jugadorId: activePlayer.id,
+        jugadorId: activePlayerId,
         jugadorNumero: 1,
         jugadorNombre: activePlayer.nombre,
         cartaNombre: `Inspiración (${musaName})`,
@@ -1786,7 +1797,8 @@ export class GameStore {
           );
 
           const updatedJugadores = currentPartida.jugadores.map((j) => {
-            const deduct = tokensDeductMap[j.id] || (j.numeroJugador === 1 ? (tokensDeductMap[1] || 0) : 0);
+            const pKey = j.id ?? j.numeroJugador;
+            const deduct = tokensDeductMap[pKey] || (j.numeroJugador === 1 ? (tokensDeductMap[1] || 0) : 0);
             if (j.numeroJugador === 1 && j.tokens && deduct > 0) return { ...j, tokens: j.tokens.slice(deduct) };
             if (j.numeroJugador === 2 && j.tokens) return { ...j, tokens: j.tokens.slice(2) };
             if (j.numeroJugador === 3 && j.tokens) return { ...j, tokens: j.tokens.slice(1) };
@@ -2031,7 +2043,8 @@ export class GameStore {
       );
 
       const updatedJugadores = currentPartida.jugadores.map((j) => {
-        const deduct = tokensDeductMap[j.id] || (j.numeroJugador === 1 ? (tokensDeductMap[1] || 0) : 0);
+        const pKey = j.id ?? j.numeroJugador;
+        const deduct = tokensDeductMap[pKey] || (j.numeroJugador === 1 ? (tokensDeductMap[1] || 0) : 0);
         if (j.numeroJugador === 1 && j.tokens && deduct > 0) return { ...j, tokens: j.tokens.slice(deduct) };
         if (j.numeroJugador === 2 && j.tokens) return { ...j, tokens: j.tokens.slice(2) };
         if (j.numeroJugador === 3 && j.tokens) return { ...j, tokens: j.tokens.slice(1) };

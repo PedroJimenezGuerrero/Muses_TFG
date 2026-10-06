@@ -57,6 +57,7 @@ export interface CartaAccion extends CartaBase {
 export interface CartaInspiracion extends CartaBase {
   tipoCarta: 'INSPIRACION';
   tipoMusa: TipoMusa;
+  nombreMusa?: TipoMusa;
   orientacion: 'LADOS' | 'VERTICES';
   usada: boolean;
 }
@@ -137,6 +138,7 @@ export const createMockPlayerHand = (solPos = 0, unusedInspirationMusa: TipoMusa
     prioridad: 1,
     nombre: `Inspiración de ${unusedInspirationMusa}`,
     tipoMusa: unusedInspirationMusa,
+    nombreMusa: unusedInspirationMusa,
     orientacion: MUSA_POINT_TIERS[unusedInspirationMusa].orientacion,
     usada: false,
   };

@@ -11,7 +11,6 @@ import {
   Token,
 } from '../fixtures/mockGameState';
 
-// @ts-expect-error - Board component implemented in Milestone M1
 import Board from '@/components/game/Board';
 
 describe('Board Component (F21: 3x3 Musas Grid & 8-Astro Orbit UI, F28, F30)', () => {

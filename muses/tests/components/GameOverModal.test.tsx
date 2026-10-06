@@ -7,7 +7,6 @@ import {
   ScoreBreakdown,
 } from '../fixtures/mockGameState';
 
-// @ts-expect-error - GameOverModal component implemented in Milestone M3
 import GameOverModal from '@/components/game/GameOverModal';
 
 describe('GameOverModal Component (F24: Victory Podium & Scoring Breakdown Modal)', () => {

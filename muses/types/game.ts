@@ -45,18 +45,22 @@ export interface CartaBase {
   id?: number;
   nombre?: string;
   descripcion?: string;
-  tipoCarta?: 'ACCION' | 'INSPIRACION';
+  tipoCarta?: 'ACCION' | 'INSPIRACION' | TipoAccion;
 }
 
 export interface CartaAccion extends CartaBase {
-  tipoCarta?: 'ACCION';
-  tipo: TipoAccion;
+  tipoCarta?: 'ACCION' | TipoAccion;
+  tipo?: TipoAccion;
+  prioridad?: number;
 }
 
 export interface CartaInspiracion extends CartaBase {
   tipoCarta?: 'INSPIRACION';
-  nombreMusa: TipoMusa;
+  nombreMusa?: TipoMusa;
+  tipoMusa?: TipoMusa;
+  orientacion?: 'LADOS' | 'VERTICES';
   usada: boolean;
+  prioridad?: number;
 }
 
 export type AnyCard = CartaAccion | CartaInspiracion;

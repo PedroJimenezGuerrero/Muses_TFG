@@ -39,8 +39,12 @@ export type ScoreBreakdownMap = Record<TipoMusa, Record<string, ScoreBreakdownIt
 
 export interface ScoreBreakdown {
   partidaId?: number;
-  filas: MuseScoreRow[];
-  totalesPorJugador: PlayerTotalScore[];
-  ganadores: PlayerTotalScore[];
+  filas?: MuseScoreRow[];
+  totalesPorJugador?: PlayerTotalScore[];
+  ganadores?: PlayerTotalScore[];
   matrix?: ScoreBreakdownMap;
+  totals?: { jugadorId: number; nombre: string; puntos: number }[];
+  winners?: string[];
+  [key: string]: any;
 }
+

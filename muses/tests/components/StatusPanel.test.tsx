@@ -3,7 +3,6 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createMockJugador, createMockPartida } from '../fixtures/mockGameState';
 
-// @ts-expect-error - StatusPanel component implemented in Milestone M1
 import StatusPanel from '@/components/game/StatusPanel';
 
 describe('StatusPanel Component (F23: Game Status, Round HUD & Token Reserves)', () => {
