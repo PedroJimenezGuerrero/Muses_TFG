@@ -35,6 +35,18 @@ public class UsuarioController {
         return newUsuario;
     }
 
+    @PostMapping("login")
+    public org.springframework.http.ResponseEntity<?> login(@RequestBody java.util.Map<String, String> creds) {
+        String username = creds.get("username");
+        String password = creds.get("password");
+        if (username == null || username.trim().isEmpty()) {
+            return org.springframework.http.ResponseEntity.badRequest().body("El nombre de usuario es obligatorio");
+        }
+        return usuarioService.authenticate(username, password)
+                .<org.springframework.http.ResponseEntity<?>>map(org.springframework.http.ResponseEntity::ok)
+                .orElseGet(() -> org.springframework.http.ResponseEntity.status(401).body("Credenciales incorrectas"));
+    }
+
     @PutMapping("{id}")
     public Usuario update(@PathVariable Long id, @RequestBody Usuario usuario) {
         return usuarioService.update(id, usuario);

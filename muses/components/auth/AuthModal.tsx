@@ -31,8 +31,12 @@ export const AuthModal = observer(({ isOpen, onClose }: AuthModalProps) => {
     }
     setLoading(true);
     try {
-      await store.loginUsuario(username.trim(), password);
-      onClose();
+      const ok = await store.loginUsuario(username.trim(), password);
+      if (ok) {
+        onClose();
+      } else {
+        setErrorMsg('Usuario o contraseña incorrectos.');
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al iniciar sesión.');
     } finally {
@@ -49,8 +53,12 @@ export const AuthModal = observer(({ isOpen, onClose }: AuthModalProps) => {
     }
     setLoading(true);
     try {
-      await store.registrarUsuario(username.trim(), email.trim(), password);
-      onClose();
+      const ok = await store.registrarUsuario(username.trim(), email.trim(), password);
+      if (ok) {
+        onClose();
+      } else {
+        setErrorMsg('Error al registrar usuario. Comprueba si el usuario o email ya existen.');
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al registrar usuario.');
     } finally {

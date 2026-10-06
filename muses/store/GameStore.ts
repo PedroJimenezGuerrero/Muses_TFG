@@ -405,56 +405,40 @@ export class GameStore {
     this.setNotification(`¡Bienvenido, ${nombre}!`);
   }
 
-  async loginUsuario(username: string, password?: string) {
+  async loginUsuario(username: string, password?: string): Promise<boolean> {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
-      const res = await fetch(`${backendUrl}/usuario`);
-      if (res.ok) {
-        const users: Usuario[] = await res.json();
-        const norm = (s?: string) => (s || '').toLowerCase().replace(/\s+/g, '');
-        const target = norm(username);
-        const found = users.find(
-          (u) =>
-            norm(u.username) === target ||
-            (u.email && u.email.toLowerCase() === username.toLowerCase())
-        );
+      const res = await fetch(`${backendUrl}/usuario/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
 
-        if (found) {
-          if (password && found.password && found.password !== password) {
-            this.setNotification('Contraseña incorrecta');
-            return;
-          }
-          runInAction(() => {
-            this.usuario = found;
-            this.isInvitado = false;
-            this.jugadorActualId = found.id ?? 1;
-            this.guardarUsuarioLocal();
-          });
-          this.setNotification(`Sesión iniciada como ${found.username}`);
-          return;
-        }
+      if (res.ok) {
+        const found: Usuario = await res.json();
+        runInAction(() => {
+          this.usuario = found;
+          this.isInvitado = false;
+          this.jugadorActualId = found.id ?? 1;
+          this.guardarUsuarioLocal();
+        });
+        this.setNotification(`Sesión iniciada como ${found.username}`);
+        return true;
+      } else if (res.status === 401) {
+        this.setNotification('Usuario o contraseña incorrectos');
+        return false;
       }
     } catch (e) {
-      // Backend not reached or offline
+      // Backend offline
     }
 
-    // Fallback: local session
-    runInAction(() => {
-      this.usuario = {
-        id: Math.floor(Math.random() * 90000 + 10000),
-        username,
-        password,
-      };
-      this.isInvitado = false;
-      this.jugadorActualId = this.usuario.id!;
-      this.guardarUsuarioLocal();
-    });
-    this.setNotification(`Sesión iniciada como ${username}`);
+    this.setNotification('No se pudo conectar con el servidor o credenciales no válidas');
+    return false;
   }
 
-  async registrarUsuario(username: string, email: string, password?: string) {
+  async registrarUsuario(username: string, email: string, password?: string): Promise<boolean> {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
       const res = await fetch(`${backendUrl}/usuario`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -469,23 +453,15 @@ export class GameStore {
           this.guardarUsuarioLocal();
         });
         this.setNotification(`¡Cuenta de ${nuevo.username} creada con éxito!`);
-        return;
+        return true;
+      } else {
+        this.setNotification('Error al crear usuario. Verifica los datos.');
+        return false;
       }
     } catch (e) {
-      // Fallback
+      this.setNotification('Error de conexión con el servidor');
+      return false;
     }
-
-    runInAction(() => {
-      this.usuario = {
-        id: Math.floor(Math.random() * 90000 + 10000),
-        username,
-        email,
-      };
-      this.isInvitado = false;
-      this.jugadorActualId = this.usuario.id!;
-      this.guardarUsuarioLocal();
-    });
-    this.setNotification(`¡Cuenta de ${username} creada con éxito!`);
   }
 
   logoutUsuario() {

@@ -19,6 +19,9 @@ public class DatabaseSeeder implements CommandLineRunner {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     @Override
     public void run(String... args) {
         seedUsers();
@@ -39,7 +42,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 Usuario usuario = new Usuario();
                 usuario.setUsername(username);
                 usuario.setEmail(email);
-                usuario.setPassword(password);
+                usuario.setPassword(passwordEncoder.encode(password));
                 usuario.setFechaRegistro(LocalDateTime.now());
 
                 Estadisticas stats = new Estadisticas();
