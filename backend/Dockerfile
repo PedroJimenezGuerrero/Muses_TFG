@@ -6,6 +6,9 @@ WORKDIR /app
 COPY build.gradle.kts settings.gradle.kts* gradlew ./
 COPY gradle ./gradle
 
+# Dar permisos de ejecución al wrapper de Gradle
+RUN chmod +x gradlew
+
 # Copiar código fuente y compilar JAR de producción
 COPY src ./src
 RUN ./gradlew bootJar --no-daemon -x test
