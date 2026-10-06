@@ -31,7 +31,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
+      <head>
+        <link rel="icon" href="/assets/astros/sol.png" type="image/png" />
+        <link rel="shortcut icon" href="/assets/astros/sol.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/assets/astros/sol.png" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
