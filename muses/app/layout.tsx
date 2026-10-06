@@ -17,10 +17,11 @@ export const metadata: Metadata = {
   description: "Muses — Juego de mesa digital táctico y mitológico",
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "any" },
       { url: "/assets/astros/sol.png", sizes: "any" },
       { url: "/icon.png", sizes: "any" },
     ],
-    shortcut: "/assets/astros/sol.png",
+    shortcut: "/favicon.ico",
     apple: "/assets/astros/sol.png",
   },
 };
@@ -33,8 +34,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/assets/astros/sol.png" type="image/png" />
-        <link rel="shortcut icon" href="/assets/astros/sol.png" type="image/png" />
+        <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/assets/astros/sol.png" />
       </head>
       <body
