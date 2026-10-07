@@ -250,6 +250,7 @@ export function buildInitialState(usuario?: Usuario | null): {
     nombre: 'Atenea (Bot)',
     numeroJugador: 2,
     puntuacionTotal: 0,
+    esBot: true,
     tokens: Array.from({ length: 20 }, (_, idx) => ({
       id: 200 + idx,
       colocado: false,
@@ -262,6 +263,7 @@ export function buildInitialState(usuario?: Usuario | null): {
     nombre: 'Hermes (Bot)',
     numeroJugador: 3,
     puntuacionTotal: 0,
+    esBot: true,
     tokens: Array.from({ length: 20 }, (_, idx) => ({
       id: 300 + idx,
       colocado: false,
@@ -787,13 +789,16 @@ export class GameStore {
             } else {
               this.setNotification(`${act.jugadorNombre} ha seleccionado su carta. (${totalSeleccionados} / ${totalEsperados})`);
             }
-          } else if (this.isAnfitrion && this.sala?.codigo && !this.isResolvingRound) {
+          } else if (this.isAnfitrion && !this.isResolvingRound) {
             const orderedActions = Object.values(currentSelections).sort((a, b) => (a.prioridad || 99) - (b.prioridad || 99));
-            this.enviarAccionSala(this.sala.codigo, {
-              type: 'INICIAR_RESOLUCION_RONDA',
-              ronda: currentRound,
-              acciones: safeClone(orderedActions),
-            });
+            if (this.sala?.codigo) {
+              this.enviarAccionSala(this.sala.codigo, {
+                type: 'INICIAR_RESOLUCION_RONDA',
+                ronda: currentRound,
+                acciones: safeClone(orderedActions),
+              });
+            }
+            this.ejecutarResolucionRonda(orderedActions);
           }
         }
       } else if ((data.type === 'CARTAS_SELECCIONADAS' || data.type === 'INICIAR_RESOLUCION_RONDA') && data.acciones) {
@@ -877,6 +882,7 @@ export class GameStore {
             acciones: safeClone(orderedActions),
           });
         }
+        this.ejecutarResolucionRonda(orderedActions);
       }
     }
   }
@@ -1921,13 +1927,16 @@ export class GameStore {
 
       if (totalSeleccionados < totalEsperados) {
         this.setNotification(`Has seleccionado ${cartaNombre}. Esperando a los demás jugadores... (${totalSeleccionados} / ${totalEsperados})`);
-      } else if (this.isAnfitrion && this.sala?.codigo && !this.isResolvingRound) {
+      } else if (this.isAnfitrion && !this.isResolvingRound) {
         const orderedActions = Object.values(currentSelections).sort((a, b) => (a.prioridad || 99) - (b.prioridad || 99));
-        this.enviarAccionSala(this.sala.codigo, {
-          type: 'INICIAR_RESOLUCION_RONDA',
-          ronda: currentRound,
-          acciones: safeClone(orderedActions),
-        });
+        if (this.sala?.codigo) {
+          this.enviarAccionSala(this.sala.codigo, {
+            type: 'INICIAR_RESOLUCION_RONDA',
+            ronda: currentRound,
+            acciones: safeClone(orderedActions),
+          });
+        }
+        this.ejecutarResolucionRonda(orderedActions);
       }
       return;
     }
@@ -1935,79 +1944,78 @@ export class GameStore {
     // --- Single player against bots (offline / fallback) ---
     const activePlayer = currentPartida.jugadores[0]; // Active player
     const activePlayerId = activePlayer.id ?? activePlayer.numeroJugador;
-    const bot1 = currentPartida.jugadores[1]; // Atenea
-    const bot2 = currentPartida.jugadores[2]; // Hermes
 
     const actionsToExecute: PlannedAction[] = [];
 
     if (cardType === 'DEVOCION_SOL') {
       actionsToExecute.push({
-        jugador: activePlayer,
+        jugador: safeClone(activePlayer),
         jugadorId: activePlayerId,
-        jugadorNumero: 1,
+        jugadorNumero: activePlayer.numeroJugador || 1,
         jugadorNombre: activePlayer.nombre,
         cartaNombre: 'Devoción Solar',
         tipoAccion: 'DEVOCION_SOL',
         prioridad: 2,
         astroPos: currentTablero.solPos,
+        rawCard: safeClone(card),
       });
     } else if (cardType === 'DEVOCION_LUNA') {
       actionsToExecute.push({
-        jugador: activePlayer,
+        jugador: safeClone(activePlayer),
         jugadorId: activePlayerId,
-        jugadorNumero: 1,
+        jugadorNumero: activePlayer.numeroJugador || 1,
         jugadorNombre: activePlayer.nombre,
         cartaNombre: 'Devoción Lunar',
         tipoAccion: 'DEVOCION_LUNA',
         prioridad: 5,
         astroPos: currentTablero.lunaPos,
+        rawCard: safeClone(card),
       });
     } else if (cardType === 'REVOLUCION_SOL') {
       actionsToExecute.push({
-        jugador: activePlayer,
+        jugador: safeClone(activePlayer),
         jugadorId: activePlayerId,
-        jugadorNumero: 1,
+        jugadorNumero: activePlayer.numeroJugador || 1,
         jugadorNombre: activePlayer.nombre,
         cartaNombre: 'Revolución Solar',
         tipoAccion: 'REVOLUCION_SOL',
         prioridad: 3,
         astroPos: currentTablero.solPos,
+        rawCard: safeClone(card),
       });
     } else if (cardType === 'REVOLUCION_LUNA') {
       actionsToExecute.push({
-        jugador: activePlayer,
+        jugador: safeClone(activePlayer),
         jugadorId: activePlayerId,
-        jugadorNumero: 1,
+        jugadorNumero: activePlayer.numeroJugador || 1,
         jugadorNombre: activePlayer.nombre,
         cartaNombre: 'Revolución Lunar',
         tipoAccion: 'REVOLUCION_LUNA',
         prioridad: 4,
         astroPos: currentTablero.lunaPos,
+        rawCard: safeClone(card),
       });
     } else if (cardType === 'INSPIRACION' || (card as any).tipoMusa || (card as any).nombreMusa) {
       const musaName = ((card as any).tipoMusa || (card as any).nombreMusa) as TipoMusa;
       actionsToExecute.push({
-        jugador: activePlayer,
+        jugador: safeClone(activePlayer),
         jugadorId: activePlayerId,
-        jugadorNumero: 1,
+        jugadorNumero: activePlayer.numeroJugador || 1,
         jugadorNombre: activePlayer.nombre,
         cartaNombre: `Inspiración (${musaName})`,
         tipoAccion: 'INSPIRACION',
         prioridad: 1,
         musaName,
-        rawCard: card,
+        rawCard: safeClone(card),
       });
     }
 
-    if (bot1) {
-      actionsToExecute.push(this.generarAccionBot(bot1, currentTablero, currentPartida.rondaActual));
-    }
+    currentPartida.jugadores.slice(1).forEach((botPlayer) => {
+      actionsToExecute.push(this.generarAccionBot(botPlayer, currentTablero, currentPartida.rondaActual));
+    });
 
-    if (bot2) {
-      actionsToExecute.push(this.generarAccionBot(bot2, currentTablero, currentPartida.rondaActual));
-    }
-
-    this.ejecutarResolucionRonda(actionsToExecute);
+    const orderedActions = actionsToExecute.sort((a, b) => (a.prioridad || 99) - (b.prioridad || 99));
+    this.ejecutarResolucionRonda(orderedActions);
   }
 
   async ejecutarResolucionRonda(actions: PlannedAction[]) {
