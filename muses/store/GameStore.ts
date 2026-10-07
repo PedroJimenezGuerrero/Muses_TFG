@@ -351,6 +351,7 @@ export class GameStore {
   isResolvingRound: boolean = false;
   creeEstaSala: boolean = false;
   roundExecutionEpoch: number = 0;
+  pendingServerState: any = null;
 
   get seleccionesRonda(): Record<number, PlannedAction> {
     const round = this.partida?.rondaActual || 1;
@@ -736,6 +737,10 @@ export class GameStore {
         this.tablero = data.tablero;
         this.partida = data.partida;
 
+        if (data.partida.id) {
+          this.suscribirAPartidaWS(data.partida.id);
+        }
+
         const commonActions: CartaAccion[] = [
           { id: 101, tipoCarta: 'ACCION', tipo: 'DEVOCION_SOL', nombre: 'Devoción Solar' },
           { id: 102, tipoCarta: 'ACCION', tipo: 'DEVOCION_LUNA', nombre: 'Devoción Lunar' },
@@ -756,6 +761,7 @@ export class GameStore {
         this.haSeleccionadoCarta = false;
         this.isResolvingRound = false;
         this.isSubmitting = false;
+        this.pendingServerState = null;
         this.setNotification('¡Partida iniciada! Selecciona tu carta para la ronda 1.');
       } else if (data.type === 'SELECCION_CARTA' && data.payload) {
         const act: PlannedAction = data.payload;
@@ -771,7 +777,7 @@ export class GameStore {
 
         const currentRound = this.partida?.rondaActual || 1;
         if (targetRound === currentRound) {
-          const totalEsperados = this.partida?.jugadores.length || this.sala?.jugadores.length || 2;
+          const totalEsperados = this.partida?.jugadores?.length || this.sala?.jugadores?.length || 2;
           const currentSelections = this.seleccionesPorRonda[currentRound] || {};
           const totalSeleccionados = Object.keys(currentSelections).length;
 
@@ -781,6 +787,13 @@ export class GameStore {
             } else {
               this.setNotification(`${act.jugadorNombre} ha seleccionado su carta. (${totalSeleccionados} / ${totalEsperados})`);
             }
+          } else if (this.isAnfitrion && this.sala?.codigo && !this.isResolvingRound) {
+            const orderedActions = Object.values(currentSelections).sort((a, b) => (a.prioridad || 99) - (b.prioridad || 99));
+            this.enviarAccionSala(this.sala.codigo, {
+              type: 'INICIAR_RESOLUCION_RONDA',
+              ronda: currentRound,
+              acciones: safeClone(orderedActions),
+            });
           }
         }
       } else if ((data.type === 'CARTAS_SELECCIONADAS' || data.type === 'INICIAR_RESOLUCION_RONDA') && data.acciones) {
@@ -790,6 +803,10 @@ export class GameStore {
         }
         this.ejecutarResolucionRonda(data.acciones);
       } else if (data.type === 'ROUND_STATE_SYNC' && data.partida) {
+        if (this.isResolvingRound) {
+          this.pendingServerState = data;
+          return;
+        }
         this.roundExecutionEpoch++;
         if (data.tablero) this.tablero = data.tablero;
         if (data.partida) this.partida = data.partida;
@@ -1474,33 +1491,49 @@ export class GameStore {
 
     socketService.subscribe(`/topic/partida/${partidaId}/estado`, (partidaData: Partida) => {
       runInAction(() => {
-        if (partidaData) {
-          this.partida = partidaData;
-          if (partidaData.tablero) {
-            this.tablero = partidaData.tablero;
-          }
-          this.isSubmitting = false;
-          this.haSeleccionadoCarta = false;
-          this.isResolvingRound = false;
-          this.currentExecutingAction = null;
-          this.pendingActions = [];
-          this.activeMusaIndex = null;
-          this.revolutionAnimating = false;
-
-          const currentR = partidaData.rondaActual;
-          this.setNotification(`¡Ronda ${currentR} iniciada! Elige tu próxima carta.`);
-          setTimeout(() => runInAction(() => { this.notification = null; }), 3000);
+        if (!partidaData) return;
+        if (this.isResolvingRound) {
+          this.pendingServerState = {
+            type: 'ROUND_STATE_SYNC',
+            partida: partidaData,
+            tablero: partidaData.tablero,
+            isGameOver: false,
+          };
+          return;
         }
+        this.partida = partidaData;
+        if (partidaData.tablero) {
+          this.tablero = partidaData.tablero;
+        }
+        this.isSubmitting = false;
+        this.haSeleccionadoCarta = false;
+        this.isResolvingRound = false;
+        this.currentExecutingAction = null;
+        this.pendingActions = [];
+        this.activeMusaIndex = null;
+        this.revolutionAnimating = false;
+
+        const currentR = partidaData.rondaActual;
+        this.setNotification(`¡Ronda ${currentR} iniciada! Elige tu próxima carta.`);
+        setTimeout(() => runInAction(() => { this.notification = null; }), 3000);
       });
     });
 
     socketService.subscribe(`/topic/partida/${partidaId}/fin`, async (partidaData: Partida) => {
       runInAction(() => {
-        if (partidaData) {
-          this.partida = partidaData;
-          if (partidaData.tablero) {
-            this.tablero = partidaData.tablero;
-          }
+        if (!partidaData) return;
+        if (this.isResolvingRound) {
+          this.pendingServerState = {
+            type: 'ROUND_STATE_SYNC',
+            partida: partidaData,
+            tablero: partidaData.tablero,
+            isGameOver: true,
+          };
+          return;
+        }
+        this.partida = partidaData;
+        if (partidaData.tablero) {
+          this.tablero = partidaData.tablero;
         }
         this.isGameOver = true;
         this.isSubmitting = false;
@@ -1850,12 +1883,19 @@ export class GameStore {
         }).catch(() => {});
       } catch (e) {}
 
-      const totalEsperados = currentPartida.jugadores.length;
+      const totalEsperados = currentPartida.jugadores?.length || this.sala?.jugadores?.length || 2;
       const currentSelections = this.seleccionesPorRonda[currentRound] || {};
       const totalSeleccionados = Object.keys(currentSelections).length;
 
       if (totalSeleccionados < totalEsperados) {
         this.setNotification(`Has seleccionado ${cartaNombre}. Esperando a los demás jugadores... (${totalSeleccionados} / ${totalEsperados})`);
+      } else if (this.isAnfitrion && this.sala?.codigo && !this.isResolvingRound) {
+        const orderedActions = Object.values(currentSelections).sort((a, b) => (a.prioridad || 99) - (b.prioridad || 99));
+        this.enviarAccionSala(this.sala.codigo, {
+          type: 'INICIAR_RESOLUCION_RONDA',
+          ronda: currentRound,
+          acciones: safeClone(orderedActions),
+        });
       }
       return;
     }
@@ -2413,31 +2453,43 @@ export class GameStore {
         lunaPos: nextLuna,
       };
 
-      if (isFinishing) {
-        const breakdown = calculateScoreBreakdown(this.tablero, updatedJugadores);
-        const finalJugadores = updatedJugadores.map((j) => {
-          let totalPts = 0;
-          Object.values(breakdown.matrix || {}).forEach((mRow: any) => {
-            const item = mRow?.[j.id ?? ''] ?? mRow?.[String(j.id)] ?? mRow?.[j.nombre];
-            if (item) {
-              totalPts += item.points || 0;
-            }
+      if (this.pendingServerState) {
+        const pState = this.pendingServerState;
+        this.pendingServerState = null;
+        if (pState.tablero) this.tablero = pState.tablero;
+        if (pState.partida) this.partida = pState.partida;
+        if (pState.scoreBreakdown) this.scoreBreakdown = pState.scoreBreakdown;
+        if (pState.isGameOver !== undefined) this.isGameOver = pState.isGameOver;
+      }
+
+      if (this.isGameOver || isFinishing) {
+        if (!this.scoreBreakdown) {
+          const breakdown = calculateScoreBreakdown(this.tablero, updatedJugadores);
+          const finalJugadores = updatedJugadores.map((j) => {
+            let totalPts = 0;
+            Object.values(breakdown.matrix || {}).forEach((mRow: any) => {
+              const item = mRow?.[j.id ?? ''] ?? mRow?.[String(j.id)] ?? mRow?.[j.nombre];
+              if (item) {
+                totalPts += item.points || 0;
+              }
+            });
+            return { ...j, puntuacionTotal: totalPts };
           });
-          return { ...j, puntuacionTotal: totalPts };
-        });
 
-        const maxScore = Math.max(...finalJugadores.map((j) => j.puntuacionTotal));
-        const winners = finalJugadores.filter((j) => j.puntuacionTotal === maxScore);
+          const maxScore = Math.max(...finalJugadores.map((j) => j.puntuacionTotal));
+          const winners = finalJugadores.filter((j) => j.puntuacionTotal === maxScore);
 
-        this.partida = {
-          ...currentPartida,
-          rondaActual: currentPartida.maxRondas,
-          tablero: this.tablero,
-          jugadores: finalJugadores,
-          ganadores: winners.map((w) => ({ id: w.id, username: w.nombre })),
-        };
+          this.partida = {
+            ...(this.partida || currentPartida),
+            rondaActual: (this.partida || currentPartida).maxRondas,
+            tablero: this.tablero,
+            jugadores: finalJugadores,
+            ganadores: winners.map((w) => ({ id: w.id, username: w.nombre })),
+          };
 
-        this.scoreBreakdown = breakdown;
+          this.scoreBreakdown = breakdown;
+        }
+
         this.isGameOver = true;
         this.isSubmitting = false;
         this.isResolvingRound = false;
@@ -2445,7 +2497,9 @@ export class GameStore {
         this.pendingActions = [];
         this.activeMusaIndex = null;
         this.revolutionAnimating = false;
-        this.registrarEstadisticasFinPartida(this.partida, this.partida.ganadores as any);
+        if (this.partida) {
+          this.registrarEstadisticasFinPartida(this.partida, this.partida.ganadores as any);
+        }
         this.setNotification('¡Partida finalizada! Calculando favores de las Musas...');
         if (this.isAnfitrion && this.sala?.codigo) {
           this.enviarAccionSala(this.sala.codigo, {
@@ -2459,12 +2513,14 @@ export class GameStore {
         }
       } else {
         const nextRound = currentRound + 1;
-        this.partida = {
-          ...currentPartida,
-          rondaActual: nextRound,
-          tablero: this.tablero,
-          jugadores: updatedJugadores,
-        };
+        if (!this.partida || this.partida.rondaActual < nextRound) {
+          this.partida = {
+            ...(this.partida || currentPartida),
+            rondaActual: nextRound,
+            tablero: this.tablero,
+            jugadores: updatedJugadores,
+          };
+        }
 
         this.selectedCard = null;
         this.hoveredCard = null;
@@ -2475,13 +2531,14 @@ export class GameStore {
         this.pendingActions = [];
         this.activeMusaIndex = null;
         this.revolutionAnimating = false;
-        this.setNotification(`¡Ronda ${nextRound} iniciada! Elige tu próxima carta.`);
+        const dispRonda = this.partida?.rondaActual || nextRound;
+        this.setNotification(`¡Ronda ${dispRonda} iniciada! Elige tu próxima carta.`);
         if (this.isAnfitrion) {
-          this.prepararAccionesBots(nextRound);
+          this.prepararAccionesBots(dispRonda);
           if (this.sala?.codigo) {
             this.enviarAccionSala(this.sala.codigo, {
               type: 'ROUND_STATE_SYNC',
-              ronda: nextRound,
+              ronda: dispRonda,
               tablero: safeClone(this.tablero),
               partida: safeClone(this.partida),
               scoreBreakdown: safeClone(this.scoreBreakdown),
@@ -2490,13 +2547,13 @@ export class GameStore {
           }
         } else {
           // Check if Guest already has selections for nextRound
-          const nextRoundSelections = this.seleccionesPorRonda[nextRound] || {};
+          const nextRoundSelections = this.seleccionesPorRonda[dispRonda] || {};
           const myKey = this.myPlayer?.id || this.jugadorActualId;
           if (nextRoundSelections[myKey]) {
             this.haSeleccionadoCarta = true;
             this.isSubmitting = true;
           }
-          const totalEsperados = this.partida.jugadores.length || 2;
+          const totalEsperados = this.partida?.jugadores?.length || 2;
           if (Object.keys(nextRoundSelections).length >= totalEsperados) {
             this.ejecutarResolucionRonda(Object.values(nextRoundSelections));
           }
