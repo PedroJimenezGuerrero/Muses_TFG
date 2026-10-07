@@ -171,10 +171,27 @@ public class PartidaService {
         Partida partida = getById(partidaId);
         Jugador jugador = jugadorService.getById(jugadorId);
 
+        CartaBase carta = cartaService.getById(cartaId);
+        if (carta == null) {
+            if (cartaId == 101L || cartaId == 1L) {
+                carta = cartaService.obtenerOCrearCartaAccion(TipoAccion.DEVOCION_SOL);
+            } else if (cartaId == 102L || cartaId == 2L) {
+                carta = cartaService.obtenerOCrearCartaAccion(TipoAccion.DEVOCION_LUNA);
+            } else if (cartaId == 103L || cartaId == 3L) {
+                carta = cartaService.obtenerOCrearCartaAccion(TipoAccion.REVOLUCION_SOL);
+            } else if (cartaId == 104L || cartaId == 4L) {
+                carta = cartaService.obtenerOCrearCartaAccion(TipoAccion.REVOLUCION_LUNA);
+            } else if (jugador != null && jugador.getCartaInspiracion() != null) {
+                carta = jugador.getCartaInspiracion();
+            }
+            if (carta != null && carta.getId() != null) {
+                cartaId = carta.getId();
+            }
+        }
+
         partida.getSeleccionesRonda().put(jugadorId, cartaId);
 
         if (messagingTemplate != null) {
-            CartaBase carta = cartaService.getById(cartaId);
             Map<String, Object> seleccionEvento = new HashMap<>();
             seleccionEvento.put("type", "SELECCION_CARTA");
             Map<String, Object> payload = new HashMap<>();
@@ -211,6 +228,7 @@ public class PartidaService {
     @Transactional
     private void gestionarSeleccionCartas(Partida partida, Jugador jugador) {
         update(partida.getId(), partida);
+        ejecutarTurnosBotsSiAplica(partida);
         if (!todosJugadoresHanSeleccionadoCarta(partida)) {
             return;
         }
@@ -228,9 +246,46 @@ public class PartidaService {
 
         List<CartaBase> cartasOrdenadasPorVotos = obtenerCartasOrdenadas(selecciones);
 
+        List<Map<String, Object>> listaAcciones = new ArrayList<>();
+        for (CartaBase cartaBase : cartasOrdenadasPorVotos) {
+            List<Jugador> votantes = jugadoresPorCarta.getOrDefault(cartaBase.getId(), Collections.emptyList());
+            for (Jugador j : votantes) {
+                Map<String, Object> accionInfo = new HashMap<>();
+                accionInfo.put("jugadorId", j.getId());
+                accionInfo.put("jugadorNombre", j.getNombre() != null ? j.getNombre() : "Jugador " + j.getId());
+                accionInfo.put("jugadorNumero", j.getNumeroJugador());
+                accionInfo.put("cartaNombre", cartaBase.getNombre());
+                accionInfo.put("cartaId", cartaBase.getId());
+                if (cartaBase instanceof CartaAccion ca && ca.getTipo() != null) {
+                    accionInfo.put("tipoAccion", ca.getTipo().name());
+                    accionInfo.put("prioridad", ca.getTipo().getPrioridad());
+                } else if (cartaBase instanceof CartaInspiracion ci) {
+                    accionInfo.put("tipoAccion", "INSPIRACION");
+                    accionInfo.put("prioridad", 1);
+                    accionInfo.put("musaName", ci.getNombreMusa() != null ? ci.getNombreMusa().name() : null);
+                }
+                listaAcciones.add(accionInfo);
+            }
+        }
+
+        Map<String, Object> resolucionEvento = new HashMap<>();
+        resolucionEvento.put("type", "CARTAS_SELECCIONADAS");
+        resolucionEvento.put("ronda", partida.getRondaActual());
+        resolucionEvento.put("acciones", listaAcciones);
+        resolucionEvento.put("cartas", cartasOrdenadasPorVotos);
+
         // Avisa mediante websocket al frontend de que ya se han seleccionado todas las cartas
-        messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/cartas-seleccionadas",
-                cartasOrdenadasPorVotos);
+        if (messagingTemplate != null) {
+            messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/cartas-seleccionadas",
+                    cartasOrdenadasPorVotos);
+            if (salaRepository != null) {
+                salaRepository.findByPartidaId(partida.getId()).ifPresent(sala -> {
+                    if (sala.getCodigo() != null) {
+                        messagingTemplate.convertAndSend("/topic/sala/" + sala.getCodigo() + "/accion", (Object) resolucionEvento);
+                    }
+                });
+            }
+        }
 
         for (CartaBase cartaBase : cartasOrdenadasPorVotos) {
             List<Jugador> votantes = jugadoresPorCarta.getOrDefault(cartaBase.getId(), Collections.emptyList());
@@ -288,7 +343,21 @@ public class PartidaService {
         }
 
         partidaRepository.save(partida);
-        messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/estado", partida);
+        if (messagingTemplate != null) {
+            messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/estado", partida);
+            if (salaRepository != null) {
+                salaRepository.findByPartidaId(partida.getId()).ifPresent(sala -> {
+                    if (sala.getCodigo() != null) {
+                        Map<String, Object> syncEvt = new HashMap<>();
+                        syncEvt.put("type", "ROUND_STATE_SYNC");
+                        syncEvt.put("partida", partida);
+                        syncEvt.put("tablero", partida.getTablero());
+                        syncEvt.put("isGameOver", false);
+                        messagingTemplate.convertAndSend("/topic/sala/" + sala.getCodigo() + "/accion", (Object) syncEvt);
+                    }
+                });
+            }
+        }
         ejecutarTurnosBotsSiAplica(partida);
         return tablero;
     }
@@ -313,7 +382,21 @@ public class PartidaService {
                 tableroService.rotarAstros(partida.getTablero());
             }
             partidaRepository.save(partida);
-            messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/estado", partida);
+            if (messagingTemplate != null) {
+                messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/estado", partida);
+                if (salaRepository != null) {
+                    salaRepository.findByPartidaId(partida.getId()).ifPresent(sala -> {
+                        if (sala.getCodigo() != null) {
+                            Map<String, Object> syncEvt = new HashMap<>();
+                            syncEvt.put("type", "ROUND_STATE_SYNC");
+                            syncEvt.put("partida", partida);
+                            syncEvt.put("tablero", partida.getTablero());
+                            syncEvt.put("isGameOver", false);
+                            messagingTemplate.convertAndSend("/topic/sala/" + sala.getCodigo() + "/accion", (Object) syncEvt);
+                        }
+                    });
+                }
+            }
             ejecutarTurnosBotsSiAplica(partida);
         }
     }
@@ -361,7 +444,21 @@ public class PartidaService {
 
         puntuacionService.procesarFinPartida(partida);
         partidaRepository.save(partida);
-        messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/fin", partida);
+        if (messagingTemplate != null) {
+            messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/fin", partida);
+            if (salaRepository != null) {
+                salaRepository.findByPartidaId(partida.getId()).ifPresent(sala -> {
+                    if (sala.getCodigo() != null) {
+                        Map<String, Object> finEvt = new HashMap<>();
+                        finEvt.put("type", "ROUND_STATE_SYNC");
+                        finEvt.put("partida", partida);
+                        finEvt.put("tablero", partida.getTablero());
+                        finEvt.put("isGameOver", true);
+                        messagingTemplate.convertAndSend("/topic/sala/" + sala.getCodigo() + "/accion", (Object) finEvt);
+                    }
+                });
+            }
+        }
     }
 
     /**

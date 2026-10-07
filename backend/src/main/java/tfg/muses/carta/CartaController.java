@@ -17,6 +17,11 @@ public class CartaController {
     @Autowired
     private CartaService cartaService;
 
+    @GetMapping
+    public List<CartaBase> getAll() {
+        return cartaService.getAll();
+    }
+
     @GetMapping("{id}")
     public CartaBase getById(@PathVariable Long id) {
         CartaBase carta = cartaService.getById(id);
