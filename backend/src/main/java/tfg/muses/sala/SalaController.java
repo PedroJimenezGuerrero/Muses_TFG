@@ -38,6 +38,9 @@ public class SalaController {
     @Autowired
     private JugadorService jugadorService;
 
+    @Autowired(required = false)
+    private tfg.muses.usuario.UsuarioService usuarioService;
+
     // --- DTOs ---
 
     public static class CrearSalaRequest {
@@ -63,6 +66,13 @@ public class SalaController {
             anfitrion = new Jugador();
             String nombre = (req.anfitrionNombre != null && !req.anfitrionNombre.isBlank())
                     ? req.anfitrionNombre : "Jugador 1";
+            if (req.anfitrionId != null && usuarioService != null) {
+                var usuario = usuarioService.getById(req.anfitrionId);
+                if (usuario != null) {
+                    anfitrion.setUsuario(usuario);
+                    nombre = usuario.getUsername();
+                }
+            }
             anfitrion.setNombre(nombre);
             anfitrion.setNumeroJugador(1);
             anfitrion = jugadorService.create(anfitrion);
@@ -83,6 +93,13 @@ public class SalaController {
             int num = salaExistente.getJugadores().size() + 1;
             String nombre = (req.jugadorNombre != null && !req.jugadorNombre.isBlank())
                     ? req.jugadorNombre : "Jugador " + num;
+            if (req.jugadorId != null && usuarioService != null) {
+                var usuario = usuarioService.getById(req.jugadorId);
+                if (usuario != null) {
+                    jugador.setUsuario(usuario);
+                    nombre = usuario.getUsername();
+                }
+            }
             jugador.setNombre(nombre);
             jugador.setNumeroJugador(num);
             jugador = jugadorService.create(jugador);
@@ -106,6 +123,15 @@ public class SalaController {
     @PostMapping("/{codigo}/iniciar")
     public ResponseEntity<Sala> iniciar(@PathVariable String codigo) {
         Sala sala = salaService.iniciarPartida(codigo);
+        return ResponseEntity.ok(sala);
+    }
+
+    @PostMapping("/{codigo}/abandonar/{jugadorId}")
+    public ResponseEntity<Sala> abandonar(@PathVariable String codigo, @PathVariable Long jugadorId) {
+        Sala sala = salaService.abandonarSala(codigo, jugadorId);
+        if (sala == null) {
+            return ResponseEntity.noContent().build();
+        }
         return ResponseEntity.ok(sala);
     }
 

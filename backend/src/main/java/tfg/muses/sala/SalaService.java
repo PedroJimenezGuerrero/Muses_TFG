@@ -3,8 +3,16 @@ package tfg.muses.sala;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +35,7 @@ import tfg.muses.partida.PartidaService;
  *   <li>Crear salas con código alfanumérico único (F33).</li>
  *   <li>Gestionar la incorporación de jugadores hasta el límite configurado (F34).</li>
  *   <li>Marcar jugadores desconectados y delegar su turno al Bot (F35).</li>
+ *   <li>Eliminación automática de salas abandonadas tras 5 minutos sin jugadores humanos.</li>
  * </ul>
  */
 @Service
@@ -36,7 +45,11 @@ public class SalaService {
     private static final String PREFIJO = "MUS-";
     private static final String ALFANUMERICO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final int LONGITUD_CODIGO = 4;
+    private static final long TIEMPO_EXPIRACION_MINUTOS = 5;
     private static final SecureRandom RANDOM = new SecureRandom();
+
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final Map<String, ScheduledFuture<?>> tareasEliminacion = new ConcurrentHashMap<>();
 
     @Autowired
     private SalaRepository salaRepository;
@@ -216,11 +229,56 @@ public class SalaService {
         return actualizada;
     }
 
+    /**
+     * Permite a un jugador abandonar la sala voluntariamente en estado ESPERANDO.
+     * Si el jugador era el anfitrión, transfiere el anfitrión al siguiente jugador disponible.
+     * Si no queda ningún jugador, elimina la sala.
+     *
+     * @param codigo     código de la sala
+     * @param jugadorId  id del jugador que sale
+     * @return la sala actualizada o null si se eliminó
+     */
+    @Transactional
+    public Sala abandonarSala(String codigo, Long jugadorId) {
+        Sala sala = obtenerPorCodigo(codigo);
+
+        boolean eraAnfitrion = sala.getAnfitrion() != null && sala.getAnfitrion().getId() != null
+                && sala.getAnfitrion().getId().equals(jugadorId);
+
+        sala.getJugadores().removeIf(j -> j.getId() != null && j.getId().equals(jugadorId));
+
+        if (sala.getJugadores().isEmpty()) {
+            cancelarEliminacionProgramada(codigo);
+            salaRepository.delete(sala);
+            log.info("Sala código={} eliminada al quedarse sin jugadores.", codigo);
+            if (messagingTemplate != null) {
+                messagingTemplate.convertAndSend("/topic/sala/" + codigo, (Object) Map.of("type", "SALA_ELIMINADA", "codigo", codigo));
+            }
+            return null;
+        }
+
+        if (eraAnfitrion) {
+            Jugador nuevoAnfitrion = sala.getJugadores().stream()
+                    .filter(j -> !j.isBot())
+                    .findFirst()
+                    .orElse(sala.getJugadores().get(0));
+            sala.setAnfitrion(nuevoAnfitrion);
+            log.info("Anfitrión salió de sala código={}. Traspaso de anfitrión a id={} '{}'",
+                    codigo, nuevoAnfitrion.getId(), nuevoAnfitrion.getNombre());
+        }
+
+        Sala actualizada = salaRepository.save(sala);
+        notificarSala(actualizada);
+        return actualizada;
+    }
+
     // --- F35: Gestión de desconexiones ---
 
     /**
      * Marca un jugador como desconectado. Si la partida está en curso,
      * delega su turno pendiente al BotService para no bloquear la mesa.
+     * Si no queda ningún humano conectado, programa la eliminación de la sala en 5 minutos.
+     * Si la sala estaba en espera y el anfitrión se desconecta, traspasa el anfitrión al siguiente humano.
      *
      * @param codigo     código de la sala
      * @param jugadorId  id del jugador desconectado
@@ -237,6 +295,23 @@ public class SalaService {
         jugadorService.update(jugador.getId(), jugador);
         log.info("Jugador id={} marcado como desconectado en sala código={}", jugadorId, codigo);
 
+        // Si la sala está en espera y el desconectado es el anfitrión, traspasar anfitrión al siguiente humano conectado
+        if (sala.getEstado() == EstadoSala.ESPERANDO) {
+            boolean eraAnfitrion = sala.getAnfitrion() != null && sala.getAnfitrion().getId() != null
+                    && sala.getAnfitrion().getId().equals(jugadorId);
+            if (eraAnfitrion) {
+                sala.getJugadores().stream()
+                        .filter(j -> !j.isBot() && j.isConectado() && !j.getId().equals(jugadorId))
+                        .findFirst()
+                        .ifPresent(nuevoAnf -> {
+                            sala.setAnfitrion(nuevoAnf);
+                            salaRepository.save(sala);
+                            log.info("Anfitrión desconectado en sala código={}. Nuevo anfitrión asignado: id={} '{}'",
+                                    codigo, nuevoAnf.getId(), nuevoAnf.getNombre());
+                        });
+            }
+        }
+
         // Si la partida está activa, el bot juega el turno pendiente del jugador
         if (sala.getEstado() == EstadoSala.EN_CURSO && sala.getPartida() != null) {
             Partida partida = sala.getPartida();
@@ -249,10 +324,14 @@ public class SalaService {
         }
 
         notificarSala(sala);
+
+        // Comprobar si queda algún jugador humano conectado
+        comprobarYProgramarEliminacion(codigo, sala);
     }
 
     /**
-     * Restaura la conexión de un jugador previamente desconectado.
+     * Restaura la conexión de un jugador previamente desconectado y
+     * cancela cualquier temporizador de borrado por inactividad.
      *
      * @param codigo     código de la sala
      * @param jugadorId  id del jugador que reconecta
@@ -260,6 +339,8 @@ public class SalaService {
      */
     @Transactional
     public Sala marcarConectado(String codigo, Long jugadorId) {
+        cancelarEliminacionProgramada(codigo);
+
         Sala sala = obtenerPorCodigo(codigo);
         sala.getJugadores().stream()
                 .filter(j -> j.getId() != null && j.getId().equals(jugadorId))
@@ -275,13 +356,109 @@ public class SalaService {
         return actualizada;
     }
 
+    /**
+     * Comprueba si quedan jugadores humanos conectados en la sala. Si no queda ninguno,
+     * programa el borrado definitivo de la sala y su partida tras 5 minutos.
+     */
+    public void comprobarYProgramarEliminacion(String codigo, Sala sala) {
+        boolean hayHumanosConectados = sala.getJugadores().stream()
+                .anyMatch(j -> !j.isBot() && j.isConectado());
+
+        if (!hayHumanosConectados) {
+            log.info("No quedan jugadores humanos conectados en sala código={}. Programando borrado en {} minutos.",
+                    codigo, TIEMPO_EXPIRACION_MINUTOS);
+
+            cancelarEliminacionProgramada(codigo);
+
+            ScheduledFuture<?> tarea = scheduler.schedule(() -> {
+                try {
+                    eliminarSalaPorInactividad(codigo);
+                } catch (Exception e) {
+                    log.error("Error al eliminar sala abandonada código={}: {}", codigo, e.getMessage(), e);
+                }
+            }, TIEMPO_EXPIRACION_MINUTOS, TimeUnit.MINUTES);
+
+            tareasEliminacion.put(codigo, tarea);
+        }
+    }
+
+    /**
+     * Cancela la tarea de borrado programado si un humano se reconecta.
+     */
+    public void cancelarEliminacionProgramada(String codigo) {
+        ScheduledFuture<?> tarea = tareasEliminacion.remove(codigo);
+        if (tarea != null && !tarea.isDone()) {
+            tarea.cancel(false);
+            log.info("Cancelada la eliminación programada para la sala código={}", codigo);
+        }
+    }
+
+    /**
+     * Ejecuta el borrado definitivo de la sala y su partida asociada si sigue sin humanos conectados.
+     */
+    @Transactional
+    public void eliminarSalaPorInactividad(String codigo) {
+        tareasEliminacion.remove(codigo);
+        var optSala = salaRepository.findByCodigo(codigo);
+        if (optSala.isEmpty()) {
+            return;
+        }
+
+        Sala sala = optSala.get();
+        boolean hayHumanosConectados = sala.getJugadores().stream()
+                .anyMatch(j -> !j.isBot() && j.isConectado());
+
+        if (hayHumanosConectados) {
+            log.info("Sala código={} no se eliminará: se detectó jugador humano conectado.", codigo);
+            return;
+        }
+
+        log.info("Eliminando definitivamente sala código={} por inactividad prolongada (5 min sin humanos).", codigo);
+
+        if (messagingTemplate != null) {
+            Map<String, Object> evento = new HashMap<>();
+            evento.put("type", "SALA_ELIMINADA_POR_INACTIVIDAD");
+            evento.put("codigo", codigo);
+            messagingTemplate.convertAndSend("/topic/sala/" + codigo, (Object) evento);
+        }
+
+        Long partidaId = sala.getPartida() != null ? sala.getPartida().getId() : null;
+        sala.setPartida(null);
+        salaRepository.save(sala);
+        salaRepository.delete(sala);
+
+        if (partidaId != null) {
+            try {
+                partidaService.delete(partidaId);
+                log.info("Partida id={} eliminada tras borrado de sala código={}", partidaId, codigo);
+            } catch (Exception e) {
+                log.warn("Error al borrar partida id={} de sala código={}: {}", partidaId, codigo, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Comprueba si una sala tiene actualmente programada su eliminación.
+     */
+    public boolean tieneEliminacionProgramada(String codigo) {
+        ScheduledFuture<?> tarea = tareasEliminacion.get(codigo);
+        return tarea != null && !tarea.isDone();
+    }
+
+    @PreDestroy
+    public void shutdownScheduler() {
+        scheduler.shutdownNow();
+    }
+
     // --- Consultas ---
 
+    @Transactional(readOnly = true)
     public Sala obtenerPorCodigo(String codigo) {
         return salaRepository.findByCodigo(codigo)
                 .orElseThrow(() -> new ResourceNotFoundException("Sala con codigo " + codigo, null));
     }
 
+    @Transactional(readOnly = true)
     public List<Sala> obtenerTodas() {
         return salaRepository.findAll();
     }

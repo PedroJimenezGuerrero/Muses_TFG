@@ -298,6 +298,53 @@ public class SalaServiceTest {
             assertTrue(anfitrion.isConectado());
             verify(jugadorService).update(eq(1L), any(Jugador.class));
         }
+
+        @Test
+        @DisplayName("Desconectar último humano programa eliminación de sala en 5 minutos")
+        void marcarDesconectado_ultimoHumano_programaEliminacion() {
+            // Desconectar jugador 2
+            jugador2.setConectado(false);
+            // Desconectar anfitrión (último humano)
+            salaService.marcarDesconectado("MUS-GAME", 1L);
+
+            assertTrue(salaService.tieneEliminacionProgramada("MUS-GAME"));
+        }
+
+        @Test
+        @DisplayName("Reconectar cancela la eliminación programada de la sala")
+        void reconectar_cancelaEliminacionProgramada() {
+            jugador2.setConectado(false);
+            salaService.marcarDesconectado("MUS-GAME", 1L);
+            assertTrue(salaService.tieneEliminacionProgramada("MUS-GAME"));
+
+            salaService.marcarConectado("MUS-GAME", 1L);
+
+            assertFalse(salaService.tieneEliminacionProgramada("MUS-GAME"));
+        }
+
+        @Test
+        @DisplayName("Eliminar sala por inactividad borra la sala y su partida")
+        void eliminarSalaPorInactividad_borraSalaYPartida() {
+            anfitrion.setConectado(false);
+            jugador2.setConectado(false);
+
+            salaService.eliminarSalaPorInactividad("MUS-GAME");
+
+            verify(salaRepository).delete(salaEnCurso);
+            verify(partidaService).delete(10L);
+        }
+
+        @Test
+        @DisplayName("Eliminar sala por inactividad NO borra si hay un humano conectado")
+        void eliminarSalaPorInactividad_noBorraSiHayHumanoConectado() {
+            anfitrion.setConectado(true);
+            jugador2.setConectado(false);
+
+            salaService.eliminarSalaPorInactividad("MUS-GAME");
+
+            verify(salaRepository, never()).delete(any(Sala.class));
+            verify(partidaService, never()).delete(anyLong());
+        }
     }
 
     // --- Helpers ---

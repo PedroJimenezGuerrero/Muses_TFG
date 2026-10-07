@@ -3,11 +3,13 @@ package tfg.muses.sala;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
@@ -26,6 +28,7 @@ import tfg.muses.partida.Partida;
 @Entity
 @Data
 @EqualsAndHashCode(callSuper = true)
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Sala extends BaseEntity {
 
     @Column(nullable = false, unique = true, length = 10)
@@ -38,14 +41,14 @@ public class Sala extends BaseEntity {
     @Column(nullable = false)
     private int maxJugadores = 4;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     private Jugador anfitrion;
 
-    @ManyToMany(cascade = CascadeType.MERGE)
+    @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.MERGE)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private List<Jugador> jugadores = new ArrayList<>();
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.EAGER)
     private Partida partida;
 }

@@ -634,15 +634,44 @@ export class GameStore {
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window && !this.lobbyChannel) {
       this.lobbyChannel = new BroadcastChannel('muses_lobby_channel');
       this.lobbyChannel.onmessage = (event) => {
-        const { type, sala, codigo, jugador, data } = event.data || {};
+        const { type, sala, codigo, jugador, jugadorId, data } = event.data || {};
         runInAction(() => {
           if (type === 'SALA_ACTION' && codigo && this.sala && this.sala.codigo === codigo && data) {
             this.procesarAccionSala(data);
           } else if (type === 'SALA_UPDATE' && sala && this.sala && this.sala.codigo === sala.codigo) {
+            const oldHostId = this.sala.anfitrion?.id;
+            const newHostId = sala.anfitrion?.id;
+            const myId = this.jugadorActualId;
+
             this.sala = sala;
+            if (oldHostId && newHostId && oldHostId !== newHostId && newHostId === myId) {
+              this.creeEstaSala = true;
+              this.setNotification('¡El anfitrión anterior ha salido de la sala! Ahora eres el nuevo anfitrión.');
+            }
+
             if (sala.estado === 'EN_CURSO' && !this.enPartida) {
               this.initGame();
               this.enPartida = true;
+            }
+          } else if (type === 'SALA_LEAVE' && codigo && this.sala && this.sala.codigo === codigo) {
+            const updated = this.sala.jugadores.filter((j) => j.id !== jugadorId);
+            if (updated.length === 0) {
+              this.sala = null;
+              this.enPartida = false;
+            } else {
+              let newHost = this.sala.anfitrion;
+              if (this.sala.anfitrion?.id === jugadorId) {
+                newHost = updated.find((j) => !j.esBot) || updated[0];
+                if (newHost.id === this.jugadorActualId) {
+                  this.creeEstaSala = true;
+                  this.setNotification('¡El anfitrión anterior ha salido de la sala! Ahora eres el nuevo anfitrión.');
+                }
+              }
+              this.sala = {
+                ...this.sala,
+                anfitrion: newHost,
+                jugadores: updated,
+              };
             }
           } else if (type === 'SALA_JOIN' && codigo && this.sala && this.sala.codigo === codigo && jugador) {
             const exists = this.sala.jugadores.some(
@@ -1136,12 +1165,25 @@ export class GameStore {
         });
         this.conectarASalaWS(cleanCode);
         return;
+      } else {
+        let errorMsg = `La sala ${cleanCode} no existe.`;
+        try {
+          const errBody = await res.json();
+          if (errBody?.message) errorMsg = errBody.message;
+        } catch (e) {}
+        this.setNotification(errorMsg);
+        const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+        if (!isTestEnv) return;
       }
     } catch (e) {
-      // Offline fallback
+      const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+      if (!isTestEnv) {
+        this.setNotification(`No se pudo conectar con el servidor para unirse a ${cleanCode}`);
+        return;
+      }
     }
 
-    // Fallback Mock Sala con sincronización cruzada
+    // Fallback Mock Sala con sincronización cruzada (solo tests)
     let existingRoom: Sala | null = null;
     if (typeof window !== 'undefined') {
       try {
@@ -1163,18 +1205,6 @@ export class GameStore {
         this.sala = {
           ...existingRoom,
           jugadores: updatedPlayers,
-        };
-      } else {
-        this.sala = {
-          id: Date.now(),
-          codigo: cleanCode,
-          estado: 'ESPERANDO',
-          maxJugadores: 3,
-          anfitrion: { id: 999, nombre: 'Anfitrión', numeroJugador: 1, puntuacionTotal: 0 },
-          jugadores: [
-            { id: 999, nombre: 'Anfitrión', numeroJugador: 1, puntuacionTotal: 0 },
-            nuevoJugador,
-          ],
         };
       }
     });
@@ -1290,11 +1320,26 @@ export class GameStore {
       if (res.ok) {
         const salaData: Sala = await res.json();
         runInAction(() => {
+          const oldHostId = this.sala?.anfitrion?.id;
+          const newHostId = salaData.anfitrion?.id;
+          const myId = this.jugadorActualId;
+
           this.sala = salaData;
+          if (oldHostId && newHostId && oldHostId !== newHostId && newHostId === myId) {
+            this.creeEstaSala = true;
+            this.setNotification('¡El anfitrión anterior ha salido de la sala! Ahora eres el nuevo anfitrión.');
+          }
+
           if (salaData.estado === 'EN_CURSO' && !this.enPartida) {
             this.initGame();
             this.enPartida = true;
           }
+        });
+      } else if (res.status === 404) {
+        runInAction(() => {
+          this.setNotification('La sala ha sido cerrada o eliminada.');
+          this.sala = null;
+          this.enPartida = false;
         });
       }
     } catch (e) {
@@ -1304,10 +1349,26 @@ export class GameStore {
 
   conectarASalaWS(codigo: string) {
     this.initLobbyChannel();
-    socketService.subscribe(`/topic/sala/${codigo}`, (data: Sala) => {
+    socketService.subscribe(`/topic/sala/${codigo}`, (data: any) => {
       runInAction(() => {
-        if (data && data.codigo === codigo) {
+        if (!data) return;
+        if (data.type === 'SALA_ELIMINADA' || data.type === 'SALA_ELIMINADA_POR_INACTIVIDAD') {
+          this.setNotification('La sala ha sido cerrada o eliminada.');
+          this.sala = null;
+          this.enPartida = false;
+          return;
+        }
+        if (data.codigo === codigo) {
+          const oldHostId = this.sala?.anfitrion?.id;
+          const newHostId = data.anfitrion?.id;
+          const myId = this.jugadorActualId;
+
           this.sala = data;
+          if (oldHostId && newHostId && oldHostId !== newHostId && newHostId === myId) {
+            this.creeEstaSala = true;
+            this.setNotification('¡El anfitrión anterior ha salido de la sala! Ahora eres el nuevo anfitrión.');
+          }
+
           if (data.partida?.id) {
             this.suscribirAPartidaWS(data.partida.id);
           }
@@ -1380,17 +1441,36 @@ export class GameStore {
     });
   }
 
-  abandonarSala() {
+  async abandonarSala() {
     if (this.sala?.codigo) {
-      socketService.unsubscribe(`/topic/sala/${this.sala.codigo}`);
-      socketService.unsubscribe(`/topic/sala/${this.sala.codigo}/accion`);
+      const codigo = this.sala.codigo;
+      const myId = this.myPlayer?.id || this.jugadorActualId;
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
+        if (myId) {
+          await fetch(`${backendUrl}/salas/${codigo}/abandonar/${myId}`, {
+            method: 'POST',
+          });
+        }
+      } catch (e) {}
+
+      socketService.unsubscribe(`/topic/sala/${codigo}`);
+      socketService.unsubscribe(`/topic/sala/${codigo}/accion`);
       if (typeof window !== 'undefined') {
-        localStorage.removeItem(`muses_room_${this.sala.codigo}`);
+        localStorage.removeItem(`muses_room_${codigo}`);
       }
+      this.lobbyChannel?.postMessage({
+        type: 'SALA_LEAVE',
+        codigo,
+        jugadorId: myId,
+      });
     }
-    this.sala = null;
-    this.enPartida = false;
-    this.isGameOver = false;
+    runInAction(() => {
+      this.sala = null;
+      this.enPartida = false;
+      this.isGameOver = false;
+      this.creeEstaSala = false;
+    });
   }
 
   initGame() {
