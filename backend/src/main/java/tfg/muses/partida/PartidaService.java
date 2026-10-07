@@ -289,8 +289,29 @@ public class PartidaService {
 
         for (CartaBase cartaBase : cartasOrdenadasPorVotos) {
             List<Jugador> votantes = jugadoresPorCarta.getOrDefault(cartaBase.getId(), Collections.emptyList());
+            boolean primeraEjecucion = true;
             for (Jugador j : votantes) {
-                cartaService.ejecutarEfecto(cartaBase, partida.getTablero(), j);
+                if (cartaBase instanceof CartaAccion ca && (ca.getTipo() == TipoAccion.REVOLUCION_SOL || ca.getTipo() == TipoAccion.REVOLUCION_LUNA)) {
+                    if (primeraEjecucion) {
+                        cartaService.ejecutarEfecto(cartaBase, partida.getTablero(), j);
+                        primeraEjecucion = false;
+                    } else {
+                        // En la misma ronda, jugadores adicionales que eligieron la misma revolución colocan su ficha sin rotar de nuevo
+                        if (ca.getTipo() == TipoAccion.REVOLUCION_SOL) {
+                            Musa musaSol = tableroService.getMusasEnAstros(partida.getTablero()).get("sol");
+                            if (musaService != null && musaSol != null) {
+                                musaService.colocarTokens(musaSol, 1, j);
+                            }
+                        } else {
+                            Musa musaLuna = tableroService.getMusasEnAstros(partida.getTablero()).get("luna");
+                            if (musaService != null && musaLuna != null) {
+                                musaService.colocarTokens(musaLuna, 1, j);
+                            }
+                        }
+                    }
+                } else {
+                    cartaService.ejecutarEfecto(cartaBase, partida.getTablero(), j);
+                }
             }
         }
         tableroService.save(partida.getTablero());
