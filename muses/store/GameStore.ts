@@ -1436,24 +1436,35 @@ export class GameStore {
     socketService.subscribe(`/topic/partida/${partidaId}/cartas-seleccionadas`, (cartasData: any) => {
       runInAction(() => {
         let acciones: PlannedAction[] = [];
+        const currentSol = this.tablero?.solPos ?? 0;
+        const currentLuna = this.tablero?.lunaPos ?? 4;
         if (Array.isArray(cartasData)) {
           acciones = cartasData.map((c: any) => {
             const isInsp = c.tipoCarta === 'INSPIRACION' || c.nombreMusa;
             const musaName = c.nombreMusa || c.tipoMusa;
+            const cardType = isInsp ? 'INSPIRACION' : (c.tipo || 'DEVOCION_SOL');
+            const astroPos = (cardType === 'DEVOCION_SOL' || cardType === 'REVOLUCION_SOL' || cardType === 'INSPIRACION') ? currentSol : currentLuna;
             return {
               jugador: c.jugador || this.partida?.jugadores?.[0] || { id: 1, nombre: 'Jugador', numeroJugador: 1, puntuacionTotal: 0 },
               jugadorId: c.jugador?.id ?? 1,
               jugadorNumero: c.jugador?.numeroJugador ?? 1,
               jugadorNombre: c.jugador?.nombre ?? 'Jugador',
               cartaNombre: c.nombre || (isInsp ? `Inspiración (${musaName})` : 'Carta'),
-              tipoAccion: isInsp ? 'INSPIRACION' : (c.tipo || 'DEVOCION_SOL'),
+              tipoAccion: cardType,
               prioridad: isInsp ? 1 : (c.tipo === 'DEVOCION_SOL' ? 2 : c.tipo === 'REVOLUCION_SOL' ? 3 : c.tipo === 'REVOLUCION_LUNA' ? 4 : 5),
+              astroPos,
               musaName,
               rawCard: c,
             };
           });
         } else if (cartasData?.acciones) {
-          acciones = cartasData.acciones;
+          acciones = cartasData.acciones.map((act: any) => {
+            const astroPos = act.astroPos !== undefined ? act.astroPos : ((act.tipoAccion === 'DEVOCION_SOL' || act.tipoAccion === 'REVOLUCION_SOL' || act.tipoAccion === 'INSPIRACION') ? currentSol : currentLuna);
+            return {
+              ...act,
+              astroPos,
+            };
+          });
         }
         if (acciones.length > 0) {
           this.ejecutarResolucionRonda(acciones);
@@ -2190,10 +2201,13 @@ export class GameStore {
       const group = actionGroups[grpIdx];
       if (!this.tablero) break;
 
+      const solPos = this.tablero.solPos ?? 0;
+      const lunaPos = this.tablero.lunaPos ?? 4;
       const playerNames = group.actions.map((a) => a.jugadorNombre).join(', ');
       let detalle = 'Ejecutando acción de la ronda...';
       if (group.tipoAccion === 'DEVOCION_SOL' || group.tipoAccion === 'DEVOCION_LUNA') {
-        const targetIndex = mapAstroToGrid(group.astroPos!);
+        const astroPos = group.astroPos !== undefined ? group.astroPos : (group.tipoAccion === 'DEVOCION_SOL' ? solPos : lunaPos);
+        const targetIndex = mapAstroToGrid(astroPos);
         const musa = this.tablero.grid[targetIndex];
         detalle = `${playerNames} coloca(n) 2 fichas de devoción en ${musa?.nombre || 'la musa'} (${group.tipoAccion === 'DEVOCION_SOL' ? 'Sol' : 'Luna'})`;
       } else if (group.tipoAccion === 'REVOLUCION_SOL' || group.tipoAccion === 'REVOLUCION_LUNA') {
@@ -2215,7 +2229,8 @@ export class GameStore {
       if (this.roundExecutionEpoch !== currentEpoch || this.isGameOver) return;
 
       if (group.tipoAccion === 'DEVOCION_SOL' || group.tipoAccion === 'DEVOCION_LUNA') {
-        const targetIndex = mapAstroToGrid(group.astroPos!);
+        const astroPos = group.astroPos !== undefined ? group.astroPos : (group.tipoAccion === 'DEVOCION_SOL' ? solPos : lunaPos);
+        const targetIndex = mapAstroToGrid(astroPos);
         const allNewTokens: any[] = [];
 
         for (const act of group.actions) {
@@ -2286,7 +2301,7 @@ export class GameStore {
         if (this.roundExecutionEpoch !== currentEpoch || this.isGameOver) return;
 
         // Step B: rotate grid ONCE in revolution
-        const targetAstroPos = group.astroPos !== undefined ? group.astroPos : (group.tipoAccion === 'REVOLUCION_SOL' ? this.tablero.solPos : this.tablero.lunaPos);
+        const targetAstroPos = group.astroPos !== undefined ? group.astroPos : (group.tipoAccion === 'REVOLUCION_SOL' ? solPos : lunaPos);
         runInAction(() => {
           if (!this.tablero) return;
           this.revolutionAnimating = true;
@@ -2317,7 +2332,7 @@ export class GameStore {
       } else if (group.tipoAccion === 'INSPIRACION') {
         for (const act of group.actions) {
           const musaName = act.musaName!;
-          const targetCells = getInspirationTargetCells(musaName, currentTablero.solPos);
+          const targetCells = getInspirationTargetCells(musaName, solPos);
           tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + targetCells.length * 2;
 
           runInAction(() => {

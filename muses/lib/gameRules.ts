@@ -20,8 +20,12 @@ import { TipoAccion, TipoInspiracion, TipoMusa } from '@/types/game';
 /**
  * Maps an astro orbit perimeter position (0-7) to adjacent 3x3 grid index (0-8).
  */
-export function mapAstroToGrid(astroPos: number): number {
-  switch (((astroPos % 8) + 8) % 8) {
+export function mapAstroToGrid(astroPos?: number | null): number {
+  if (astroPos === undefined || astroPos === null || isNaN(astroPos)) {
+    return 0;
+  }
+  const pos = ((Math.floor(astroPos) % 8) + 8) % 8;
+  switch (pos) {
     case 0:
       return 0; // Top-Left Vertex
     case 1:
@@ -39,22 +43,24 @@ export function mapAstroToGrid(astroPos: number): number {
     case 7:
       return 3; // Left Side
     default:
-      throw new Error(`Invalid astro position: ${astroPos}`);
+      return 0;
   }
 }
 
 /**
  * Computes the diametrically opposite astro position in the 8-slot ring.
  */
-export function getOppositeAstroPos(pos: number): number {
-  return (pos + 4) % 8;
+export function getOppositeAstroPos(pos?: number | null): number {
+  const safePos = (pos === undefined || pos === null || isNaN(pos)) ? 0 : pos;
+  return (((Math.floor(safePos) + 4) % 8) + 8) % 8;
 }
 
 /**
  * Clockwise step for Sun and Moon at end of round.
  */
-export function advanceAstros(solPos: number, lunaPos: number): { solPos: number; lunaPos: number } {
-  const nextSol = (solPos + 1) % 8;
+export function advanceAstros(solPos?: number | null, lunaPos?: number | null): { solPos: number; lunaPos: number } {
+  const safeSol = (solPos === undefined || solPos === null || isNaN(solPos)) ? 0 : solPos;
+  const nextSol = ((Math.floor(safeSol) + 1) % 8 + 8) % 8;
   const nextLuna = (nextSol + 4) % 8;
   return { solPos: nextSol, lunaPos: nextLuna };
 }
@@ -91,13 +97,13 @@ export const REVOLUTION_STATIONARY: Record<number, number[]> = {
 /**
  * Pure function applying 6-muse clockwise rotation to a 9-element grid.
  */
-export function applyRevolution<T>(grid: T[], astroPos: number): T[] {
-  if (grid.length !== 9) throw new Error('Grid must contain exactly 9 cells.');
+export function applyRevolution<T>(grid: T[], astroPos?: number | null): T[] {
+  if (!grid || grid.length !== 9) return grid || [];
   const newGrid = [...grid];
-  const cycle = REVOLUTION_CYCLES[astroPos];
-  if (!cycle) throw new Error(`Invalid astro position: ${astroPos}`);
+  const safePos = (astroPos === undefined || astroPos === null || isNaN(astroPos)) ? 0 : (((Math.floor(astroPos) % 8) + 8) % 8);
+  const cycle = REVOLUTION_CYCLES[safePos] || REVOLUTION_CYCLES[0];
+  if (!cycle) return newGrid;
 
-  // In clockwise rotation: cycle[0] -> cycle[1], cycle[1] -> cycle[2], ... cycle[last] -> cycle[0]
   const temp = grid[cycle[cycle.length - 1]];
   for (let i = cycle.length - 1; i > 0; i--) {
     newGrid[cycle[i]] = grid[cycle[i - 1]];
@@ -111,8 +117,9 @@ export function applyRevolution<T>(grid: T[], astroPos: number): T[] {
  * Returns grid cell indices targeted by an inspiration card given the current Sun position.
  * Returns empty array if Sun orientation is invalid for this muse.
  */
-export function getInspirationTargetCells(musa: TipoMusa, solPos: number): number[] {
-  const normSol = ((solPos % 8) + 8) % 8;
+export function getInspirationTargetCells(musa: TipoMusa | string, solPos?: number | null): number[] {
+  const safeSol = (solPos === undefined || solPos === null || isNaN(solPos)) ? 0 : solPos;
+  const normSol = ((Math.floor(safeSol) % 8) + 8) % 8;
   switch (musa) {
     case 'CLIO': // LADOS (1, 3, 5, 7)
       if (normSol === 1) return [5];
