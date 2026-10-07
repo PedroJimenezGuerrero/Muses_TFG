@@ -12,6 +12,7 @@ import { LobbyView } from '@/components/game/LobbyView';
 import { GameOverModal } from '@/components/game/GameOverModal';
 import { AuthModal, ProfileModal } from '@/components/auth';
 import { useGameSocket } from '@/hooks/useGameSocket';
+import { preloadGameAssets } from '@/lib/preloadAssets';
 import { Sparkles, RotateCcw, LogOut, History, User, ShieldCheck } from 'lucide-react';
 
 const GamePage = observer(() => {
@@ -22,6 +23,7 @@ const GamePage = observer(() => {
 
   useEffect(() => {
     setMounted(true);
+    preloadGameAssets();
   }, []);
 
   // Connect STOMP socket hook

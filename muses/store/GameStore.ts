@@ -350,6 +350,7 @@ export class GameStore {
   haSeleccionadoCarta: boolean = false;
   isResolvingRound: boolean = false;
   creeEstaSala: boolean = false;
+  roundExecutionEpoch: number = 0;
 
   get seleccionesRonda(): Record<number, PlannedAction> {
     const round = this.partida?.rondaActual || 1;
@@ -786,6 +787,7 @@ export class GameStore {
           }
         }
       } else if (data.type === 'ROUND_STATE_SYNC' && data.partida && !this.isAnfitrion) {
+        this.roundExecutionEpoch++;
         if (data.tablero) this.tablero = data.tablero;
         if (data.partida) this.partida = data.partida;
         if (data.scoreBreakdown) this.scoreBreakdown = data.scoreBreakdown;
@@ -1860,6 +1862,7 @@ export class GameStore {
   async ejecutarResolucionRonda(actions: PlannedAction[]) {
     if (this.isResolvingRound) return;
     this.isResolvingRound = true;
+    const currentEpoch = ++this.roundExecutionEpoch;
 
     runInAction(() => {
       this.isSubmitting = true;
@@ -2141,6 +2144,7 @@ export class GameStore {
         this.setNotification(`Resolviendo: ${group.cartaNombre} (${playerNames})...`);
       });
       await sleep(1000);
+      if (this.roundExecutionEpoch !== currentEpoch || this.isGameOver) return;
 
       if (group.tipoAccion === 'DEVOCION_SOL' || group.tipoAccion === 'DEVOCION_LUNA') {
         const targetIndex = mapAstroToGrid(group.astroPos!);
@@ -2182,6 +2186,7 @@ export class GameStore {
         });
 
         await sleep(900);
+        if (this.roundExecutionEpoch !== currentEpoch || this.isGameOver) return;
         runInAction(() => {
           this.activeMusaIndex = null;
         });
@@ -2210,6 +2215,7 @@ export class GameStore {
         });
 
         await sleep(600);
+        if (this.roundExecutionEpoch !== currentEpoch || this.isGameOver) return;
 
         // Step B: rotate grid ONCE in revolution
         const targetAstroPos = group.astroPos !== undefined ? group.astroPos : (group.tipoAccion === 'REVOLUCION_SOL' ? this.tablero.solPos : this.tablero.lunaPos);
@@ -2235,6 +2241,7 @@ export class GameStore {
         });
 
         await sleep(1000);
+        if (this.roundExecutionEpoch !== currentEpoch || this.isGameOver) return;
         runInAction(() => {
           this.revolutionAnimating = false;
           this.activeMusaIndex = null;
@@ -2280,10 +2287,12 @@ export class GameStore {
           });
 
           await sleep(1100);
+          if (this.roundExecutionEpoch !== currentEpoch || this.isGameOver) return;
         }
       }
 
       await sleep(300);
+      if (this.roundExecutionEpoch !== currentEpoch || this.isGameOver) return;
     }
 
     // Advance Astros
@@ -2292,6 +2301,7 @@ export class GameStore {
       this.setNotification('Avanzando astros en la órbita celeste...');
     });
     await sleep(600);
+    if (this.roundExecutionEpoch !== currentEpoch || this.isGameOver) return;
 
     runInAction(() => {
       if (!this.tablero || !this.partida) return;
@@ -2394,6 +2404,18 @@ export class GameStore {
               scoreBreakdown: safeClone(this.scoreBreakdown),
               isGameOver: false,
             });
+          }
+        } else {
+          // Check if Guest already has selections for nextRound
+          const nextRoundSelections = this.seleccionesPorRonda[nextRound] || {};
+          const myKey = this.myPlayer?.id || this.jugadorActualId;
+          if (nextRoundSelections[myKey]) {
+            this.haSeleccionadoCarta = true;
+            this.isSubmitting = true;
+          }
+          const totalEsperados = this.partida.jugadores.length || 2;
+          if (Object.keys(nextRoundSelections).length >= totalEsperados) {
+            this.ejecutarResolucionRonda(Object.values(nextRoundSelections));
           }
         }
         setTimeout(() => runInAction(() => { this.notification = null; }), 3500);
