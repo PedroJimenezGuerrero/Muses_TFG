@@ -110,14 +110,14 @@ const GamePage = observer(() => {
       </header>
 
       {/* Main Play Area — Side-by-Side Screen Layout (No Scroll) */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 flex items-center justify-center relative overflow-hidden">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 flex items-center justify-center relative">
         {!store.enPartida ? (
           <LobbyView />
         ) : (
-          <div className="w-full h-full flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-10 pb-28 pt-1">
+          <div className="w-full h-full flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-8 pt-4 pb-28">
             {/* Left Side: Game HUD & Players Status */}
             {store.partida && (
-              <aside className="w-full lg:w-64 max-w-xs shrink-0 flex flex-col gap-3 z-20 -translate-y-4 sm:-translate-y-8">
+              <aside className="w-full lg:w-64 max-w-xs shrink-0 flex flex-col gap-3 z-20">
                 <StatusPanel
                   partida={store.partida}
                   currentUserId={store.jugadorActualId}
@@ -129,7 +129,7 @@ const GamePage = observer(() => {
 
             {/* Center Arena: 3x3 Board with Orbit and Action Resolution Stack */}
             {store.tablero && (
-              <section className="flex-1 flex flex-col items-center justify-center relative z-10 -translate-y-2 sm:-translate-y-4">
+              <section className="flex-1 flex flex-col items-center justify-center relative z-10">
                 <Board
                   tablero={store.tablero}
                   hoveredCard={store.hoveredCard}
@@ -146,53 +146,53 @@ const GamePage = observer(() => {
             )}
 
             {/* Right Side Info: Action Resolution Log & Guide */}
-            <aside className="hidden xl:flex w-72 max-w-xs shrink-0 flex-col gap-3 z-20 -translate-y-2 sm:-translate-y-4">
+            <aside className="hidden xl:flex w-80 max-w-sm shrink-0 flex-col gap-3.5 z-20">
               {/* Turn Action Resolution Log */}
               {store.actionLogs.length > 0 && (
-                <div className="p-3.5 rounded-2xl bg-zinc-950/85 border border-amber-500/30 backdrop-blur-md shadow-lg flex flex-col gap-2.5 animate-in fade-in slide-in-from-right-3 duration-300">
-                  <span className="text-xs uppercase font-bold tracking-wider text-amber-400 flex items-center gap-1.5 border-b border-amber-500/20 pb-1.5">
+                <div className="p-4 rounded-2xl bg-zinc-950/90 border border-amber-500/30 backdrop-blur-md shadow-lg flex flex-col gap-3 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <span className="text-sm uppercase font-bold tracking-wider text-amber-400 flex items-center gap-2 border-b border-amber-500/20 pb-2">
                     <History className="w-4 h-4" />
                     Resolución de la Ronda
                   </span>
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {store.actionLogs.map((log, idx) => (
                       <div
                         key={idx}
-                        className="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800 text-xs flex flex-col gap-1"
+                        className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-sm flex flex-col gap-1.5"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-amber-200 text-xs">{log.jugadorNombre}</span>
-                          <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-semibold">
+                          <span className="font-bold text-amber-200 text-sm">{log.jugadorNombre}</span>
+                          <span className="text-xs uppercase px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-semibold">
                             {log.cartaNombre}
                           </span>
                         </div>
-                        <span className="text-zinc-300 text-xs leading-tight">{log.detalle}</span>
+                        <span className="text-zinc-200 text-sm leading-snug">{log.detalle}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              <div className="p-4 rounded-2xl bg-zinc-950/85 border border-zinc-800/80 backdrop-blur-md shadow-lg flex flex-col gap-2.5 text-sm">
-                <span className="text-xs uppercase font-bold tracking-wider text-amber-400/90 flex items-center gap-1.5 border-b border-zinc-800/80 pb-1.5">
+              <div className="p-4 rounded-2xl bg-zinc-950/90 border border-zinc-800/80 backdrop-blur-md shadow-lg flex flex-col gap-3 text-sm">
+                <span className="text-sm uppercase font-bold tracking-wider text-amber-400/90 flex items-center gap-2 border-b border-zinc-800/80 pb-2">
                   <Sparkles className="w-4 h-4 text-amber-400" />
                   Guía Rápida
                 </span>
-                <p className="text-zinc-300 leading-relaxed text-xs">
+                <p className="text-zinc-200 leading-relaxed text-sm">
                   Pasa el ratón sobre cualquier musa para consultar sus puntos o sobre tus cartas para ver sus efectos.
                 </p>
-                <div className="border-t border-zinc-800/80 pt-2.5 space-y-1.5 text-xs text-zinc-300">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)] shrink-0" />
-                    <span>Sol: Coloca 2 tokens o rota</span>
+                <div className="border-t border-zinc-800/80 pt-3 space-y-2 text-sm text-zinc-200">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] shrink-0" />
+                    <span className="font-medium">Sol: Coloca 2 tokens o rota</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-[0_0_6px_rgba(99,102,241,0.8)] shrink-0" />
-                    <span>Luna: Coloca 2 tokens o rota</span>
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-3 h-3 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.8)] shrink-0" />
+                    <span className="font-medium">Luna: Coloca 2 tokens o rota</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_6px_rgba(192,132,252,0.8)] shrink-0" />
-                    <span>Inspiración: 1 token geométrico</span>
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-3 h-3 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)] shrink-0" />
+                    <span className="font-medium">Inspiración: 1 token geométrico</span>
                   </div>
                 </div>
               </div>

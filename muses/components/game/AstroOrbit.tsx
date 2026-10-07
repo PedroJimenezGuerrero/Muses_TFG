@@ -99,7 +99,7 @@ export const AstroOrbit = observer<AstroOrbitProps>(({
   return (
     <div
       data-testid="astro-orbit"
-      className={`relative flex flex-col items-center justify-center p-3 sm:p-5 rounded-3xl bg-slate-950/80 border border-amber-900/30 backdrop-blur-md shadow-2xl ${className}`}
+      className={`relative flex flex-col items-center justify-center p-3 sm:p-5 pt-5 sm:pt-7 pb-4 sm:pb-6 rounded-3xl bg-slate-950/80 border border-amber-900/30 backdrop-blur-md shadow-2xl ${className}`}
     >
       {/* Top Orbit Track: Slots 0, 1, 2 */}
       <div className="flex items-center justify-between w-full max-w-[620px] px-2 sm:px-6 mb-2 sm:mb-3">
