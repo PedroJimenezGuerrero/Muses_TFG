@@ -194,7 +194,9 @@ public class PartidaService {
         if (messagingTemplate != null) {
             Map<String, Object> seleccionEvento = new HashMap<>();
             seleccionEvento.put("type", "SELECCION_CARTA");
+            seleccionEvento.put("ronda", partida.getRondaActual());
             Map<String, Object> payload = new HashMap<>();
+            payload.put("ronda", partida.getRondaActual());
             payload.put("jugadorId", jugadorId);
             payload.put("jugadorNombre", jugador != null ? jugador.getNombre() : "Jugador " + jugadorId);
             payload.put("jugadorNumero", jugador != null ? jugador.getNumeroJugador() : 1);

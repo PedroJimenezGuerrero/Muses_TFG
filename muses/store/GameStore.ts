@@ -840,6 +840,7 @@ export class GameStore {
       this.seleccionesPorRonda[round] = {};
     }
 
+    let addedAnyBot = false;
     this.partida.jugadores.forEach((j) => {
       const isBotPlayer = j.esBot || (j as any).bot || j.nombre?.toLowerCase().includes('bot');
       const pId = j.id ?? j.numeroJugador;
@@ -847,14 +848,36 @@ export class GameStore {
         const botAction = this.generarAccionBot(j, this.tablero!, round);
         botAction.ronda = round;
         this.seleccionesPorRonda[round][pId] = botAction;
+        addedAnyBot = true;
         if (this.sala?.codigo) {
           this.enviarAccionSala(this.sala.codigo, {
             type: 'SELECCION_CARTA',
             payload: safeClone(botAction),
           });
         }
+        if (this.partida?.id && botAction.rawCard?.id) {
+          const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
+          fetch(`${backendUrl}/partida/${this.partida.id}/seleccionar-carta?jugadorId=${pId}&cartaId=${botAction.rawCard.id}`, {
+            method: 'POST'
+          }).catch(() => {});
+        }
       }
     });
+
+    if (addedAnyBot && round === this.partida.rondaActual) {
+      const totalEsperados = this.partida.jugadores?.length || this.sala?.jugadores?.length || 2;
+      const currentSelections = this.seleccionesPorRonda[round] || {};
+      if (Object.keys(currentSelections).length >= totalEsperados && !this.isResolvingRound) {
+        const orderedActions = Object.values(currentSelections).sort((a, b) => (a.prioridad || 99) - (b.prioridad || 99));
+        if (this.sala?.codigo) {
+          this.enviarAccionSala(this.sala.codigo, {
+            type: 'INICIAR_RESOLUCION_RONDA',
+            ronda: round,
+            acciones: safeClone(orderedActions),
+          });
+        }
+      }
+    }
   }
 
   generarAccionBot(bot: Jugador, tablero: Tablero, ronda: number): PlannedAction {
@@ -971,6 +994,7 @@ export class GameStore {
           tipoAccion: 'DEVOCION_SOL',
           prioridad: 2,
           astroPos: solPos,
+          rawCard: { id: 101, tipoCarta: 'ACCION', tipo: 'DEVOCION_SOL', nombre: 'Devoción Solar' },
         },
         weight: 20.0 + solPts + (10.0 * deltaSol),
       },
@@ -984,6 +1008,7 @@ export class GameStore {
           tipoAccion: 'DEVOCION_LUNA',
           prioridad: 5,
           astroPos: lunaPos,
+          rawCard: { id: 102, tipoCarta: 'ACCION', tipo: 'DEVOCION_LUNA', nombre: 'Devoción Lunar' },
         },
         weight: 20.0 + lunaPts + (10.0 * deltaLuna),
       },
@@ -997,6 +1022,7 @@ export class GameStore {
           tipoAccion: 'REVOLUCION_SOL',
           prioridad: 3,
           astroPos: solPos,
+          rawCard: { id: 103, tipoCarta: 'ACCION', tipo: 'REVOLUCION_SOL', nombre: 'Revolución Solar' },
         },
         weight: 5.0 + centroPts + (10.0 * deltaCentro) + 1.0,
       },
@@ -1010,6 +1036,7 @@ export class GameStore {
           tipoAccion: 'REVOLUCION_LUNA',
           prioridad: 4,
           astroPos: lunaPos,
+          rawCard: { id: 104, tipoCarta: 'ACCION', tipo: 'REVOLUCION_LUNA', nombre: 'Revolución Lunar' },
         },
         weight: 5.0 + centroPts + (10.0 * deltaCentro),
       }
