@@ -77,20 +77,21 @@ export const GameOverModal = observer<GameOverModalProps>(({
 
   if (!isOpen) return null;
 
-  // Group players by podium place
-  const firstPlace = isJointWinner
-    ? winnerJugadores
-    : jugadores.slice(0, 1);
-  const secondPlace = isJointWinner
-    ? []
-    : jugadores.length > 1
-    ? [jugadores[1]]
-    : [];
-  const thirdPlace = isJointWinner
-    ? []
-    : jugadores.length > 2
-    ? [jugadores[2]]
-    : [];
+  // Group players by podium place using standard sports ranking rules (1-2-3 / 1-1-3 / 1-2-2 / 1-1-1)
+  let currentRank = 1;
+  const rankMap = new Map<number, typeof jugadores>();
+  let i = 0;
+  while (i < jugadores.length) {
+    const score = jugadores[i].puntuacionTotal;
+    const tiedGroup = jugadores.filter((j) => j.puntuacionTotal === score);
+    rankMap.set(currentRank, tiedGroup);
+    currentRank += tiedGroup.length;
+    i += tiedGroup.length;
+  }
+
+  const firstPlace = rankMap.get(1) || [];
+  const secondPlace = rankMap.get(2) || [];
+  const thirdPlace = rankMap.get(3) || [];
 
   // Determine header title
   const headerTitle = isJointWinner
@@ -139,7 +140,7 @@ export const GameOverModal = observer<GameOverModalProps>(({
           >
             <Medal className="w-5 h-5 text-slate-300 mb-0.5" />
             <div className="font-serif font-bold text-xs sm:text-sm text-slate-200 truncate max-w-full">
-              {secondPlace.map((j) => j.nombre).join(' & ') || (isJointWinner ? '-' : 'Atenea')}
+              {secondPlace.length > 0 ? secondPlace.map((j) => j.nombre).join(' & ') : '-'}
             </div>
             <div className="text-[10px] sm:text-xs text-slate-400 mb-0.5">
               {secondPlace[0] ? `${secondPlace[0].puntuacionTotal} pts` : ''}
@@ -156,7 +157,7 @@ export const GameOverModal = observer<GameOverModalProps>(({
           >
             <Crown className="w-6 h-6 text-amber-400 mb-0.5 animate-pulse" />
             <div className="font-serif font-extrabold text-xs sm:text-base text-amber-300 truncate max-w-full">
-              {firstPlace.map((j) => j.nombre).join(' & ') || 'Apolo'}
+              {firstPlace.length > 0 ? firstPlace.map((j) => j.nombre).join(' & ') : '-'}
             </div>
             <div className="text-[11px] sm:text-xs font-semibold text-amber-400/90 mb-0.5">
               {firstPlace[0] ? `${firstPlace[0].puntuacionTotal} pts` : ''}
@@ -173,7 +174,7 @@ export const GameOverModal = observer<GameOverModalProps>(({
           >
             <Medal className="w-4 h-4 text-amber-700 mb-0.5" />
             <div className="font-serif font-bold text-xs sm:text-sm text-amber-600/90 truncate max-w-full">
-              {thirdPlace.map((j) => j.nombre).join(' & ') || '-'}
+              {thirdPlace.length > 0 ? thirdPlace.map((j) => j.nombre).join(' & ') : '-'}
             </div>
             <div className="text-[10px] sm:text-xs text-amber-700/80 mb-0.5">
               {thirdPlace[0] ? `${thirdPlace[0].puntuacionTotal} pts` : ''}
