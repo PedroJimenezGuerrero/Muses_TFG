@@ -54,6 +54,7 @@ export interface PlannedAction {
   cartaNombre: string;
   tipoAccion: string;
   prioridad: number;
+  ronda?: number;
   astroPos?: number;
   musaName?: TipoMusa;
   rawCard?: AnyCard;
@@ -345,10 +346,15 @@ export class GameStore {
   pendingActions: PlannedAction[] = [];
 
   // Multiplayer Turn Synchronization
-  seleccionesRonda: Record<number, PlannedAction> = {};
+  seleccionesPorRonda: Record<number, Record<number, PlannedAction>> = {};
   haSeleccionadoCarta: boolean = false;
   isResolvingRound: boolean = false;
   creeEstaSala: boolean = false;
+
+  get seleccionesRonda(): Record<number, PlannedAction> {
+    const round = this.partida?.rondaActual || 1;
+    return this.seleccionesPorRonda[round] || {};
+  }
 
   // Auth State
   usuario: Usuario | null = null;
@@ -745,50 +751,90 @@ export class GameStore {
         }
 
         this.enPartida = true;
-        this.seleccionesRonda = {};
+        this.seleccionesPorRonda = {};
         this.haSeleccionadoCarta = false;
         this.isResolvingRound = false;
         this.isSubmitting = false;
         this.setNotification('¡Partida iniciada! Selecciona tu carta para la ronda 1.');
       } else if (data.type === 'SELECCION_CARTA' && data.payload) {
         const act: PlannedAction = data.payload;
-        this.seleccionesRonda = {
-          ...this.seleccionesRonda,
-          [act.jugadorId]: act,
-        };
+        const targetRound = act.ronda || this.partida?.rondaActual || 1;
+        if (!this.seleccionesPorRonda[targetRound]) {
+          this.seleccionesPorRonda[targetRound] = {};
+        }
+        this.seleccionesPorRonda[targetRound][act.jugadorId] = act;
 
         if (this.isAnfitrion) {
-          this.prepararAccionesBots();
+          this.prepararAccionesBots(targetRound);
         }
 
-        const totalEsperados = this.partida?.jugadores.length || this.sala?.jugadores.length || 2;
-        const totalSeleccionados = Object.keys(this.seleccionesRonda).length;
+        const currentRound = this.partida?.rondaActual || 1;
+        if (targetRound === currentRound) {
+          const totalEsperados = this.partida?.jugadores.length || this.sala?.jugadores.length || 2;
+          const currentSelections = this.seleccionesPorRonda[currentRound] || {};
+          const totalSeleccionados = Object.keys(currentSelections).length;
 
-        if (totalSeleccionados < totalEsperados) {
-          if (this.haSeleccionadoCarta) {
-            this.setNotification(`Has seleccionado tu carta. Esperando a los demás jugadores... (${totalSeleccionados} / ${totalEsperados})`);
+          if (totalSeleccionados < totalEsperados) {
+            if (this.haSeleccionadoCarta) {
+              this.setNotification(`Has seleccionado tu carta. Esperando a los demás jugadores... (${totalSeleccionados} / ${totalEsperados})`);
+            } else {
+              this.setNotification(`${act.jugadorNombre} ha seleccionado su carta. (${totalSeleccionados} / ${totalEsperados})`);
+            }
           } else {
-            this.setNotification(`${act.jugadorNombre} ha seleccionado su carta. (${totalSeleccionados} / ${totalEsperados})`);
+            // All players selected for current round!
+            this.ejecutarResolucionRonda(Object.values(currentSelections));
           }
+        }
+      } else if (data.type === 'ROUND_STATE_SYNC' && data.partida) {
+        if (data.tablero) this.tablero = data.tablero;
+        if (data.partida) this.partida = data.partida;
+        if (data.scoreBreakdown) this.scoreBreakdown = data.scoreBreakdown;
+        if (data.isGameOver !== undefined) this.isGameOver = data.isGameOver;
+        this.isSubmitting = false;
+        this.haSeleccionadoCarta = false;
+        this.isResolvingRound = false;
+        this.currentExecutingAction = null;
+        this.pendingActions = [];
+        this.activeMusaIndex = null;
+        this.revolutionAnimating = false;
+        if (this.isGameOver) {
+          this.setNotification('¡Partida finalizada! Calculando favores de las Musas...');
         } else {
-          // All players selected!
-          this.ejecutarResolucionRonda(Object.values(this.seleccionesRonda));
+          const currentR = this.partida.rondaActual;
+          this.setNotification(`¡Ronda ${currentR} iniciada! Elige tu próxima carta.`);
+          setTimeout(() => runInAction(() => { this.notification = null; }), 3000);
+          const currentRoundSelections = this.seleccionesPorRonda[currentR] || {};
+          const myKey = this.myPlayer?.id || this.jugadorActualId;
+          if (currentRoundSelections[myKey]) {
+            this.haSeleccionadoCarta = true;
+            this.isSubmitting = true;
+          }
+          const totalEsperados = this.partida.jugadores.length || 2;
+          if (Object.keys(currentRoundSelections).length >= totalEsperados) {
+            this.ejecutarResolucionRonda(Object.values(currentRoundSelections));
+          }
         }
       }
     });
   }
 
-  prepararAccionesBots() {
+  prepararAccionesBots(targetRound?: number) {
     if (!this.partida || !this.tablero) return;
     const isMultiplayer = !!(this.sala && this.sala.jugadores && this.sala.jugadores.length > 1);
     if (isMultiplayer && !this.isAnfitrion) return;
 
+    const round = targetRound || this.partida.rondaActual;
+    if (!this.seleccionesPorRonda[round]) {
+      this.seleccionesPorRonda[round] = {};
+    }
+
     this.partida.jugadores.forEach((j) => {
       const isBotPlayer = j.esBot || (j as any).bot || j.nombre?.toLowerCase().includes('bot');
       const pId = j.id ?? j.numeroJugador;
-      if (isBotPlayer && !this.seleccionesRonda[pId]) {
-        const botAction = this.generarAccionBot(j, this.tablero!, this.partida!.rondaActual);
-        this.seleccionesRonda[pId] = botAction;
+      if (isBotPlayer && !this.seleccionesPorRonda[round][pId]) {
+        const botAction = this.generarAccionBot(j, this.tablero!, round);
+        botAction.ronda = round;
+        this.seleccionesPorRonda[round][pId] = botAction;
         if (this.sala?.codigo) {
           this.enviarAccionSala(this.sala.codigo, {
             type: 'SELECCION_CARTA',
@@ -1531,7 +1577,7 @@ export class GameStore {
     this.scoreBreakdown = null;
     this.actionLogs = [];
     this.notification = null;
-    this.seleccionesRonda = {};
+    this.seleccionesPorRonda = {};
     this.haSeleccionadoCarta = false;
     this.isResolvingRound = false;
     this.currentExecutingAction = null;
@@ -1678,7 +1724,7 @@ export class GameStore {
         prioridad = 1;
       }
 
-      const myKey = myJugador.id ?? myJugador.numeroJugador;
+      const currentRound = currentPartida.rondaActual;
       const plannedAction: PlannedAction = {
         jugador: safeClone(myJugador),
         jugadorId: myKey,
@@ -1687,6 +1733,7 @@ export class GameStore {
         cartaNombre,
         tipoAccion,
         prioridad,
+        ronda: currentRound,
         astroPos,
         musaName,
         rawCard: safeClone(card),
@@ -1695,24 +1742,14 @@ export class GameStore {
       runInAction(() => {
         this.haSeleccionadoCarta = true;
         this.isSubmitting = true;
-        this.seleccionesRonda = {
-          ...this.seleccionesRonda,
-          [myKey]: plannedAction,
-        };
+        if (!this.seleccionesPorRonda[currentRound]) {
+          this.seleccionesPorRonda[currentRound] = {};
+        }
+        this.seleccionesPorRonda[currentRound][myKey] = plannedAction;
 
         // If I am host, also generate bot selections for any bots in the match that haven't selected yet!
         if (this.isAnfitrion) {
-          currentPartida.jugadores.forEach((j) => {
-            const botKey = j.id ?? j.numeroJugador;
-            if ((j.esBot || j.nombre?.startsWith('Bot')) && !this.seleccionesRonda[botKey]) {
-              const botAction = this.generarAccionBot(j, currentTablero, currentPartida.rondaActual);
-              this.seleccionesRonda[botKey] = botAction;
-              this.enviarAccionSala(this.sala!.codigo, {
-                type: 'SELECCION_CARTA',
-                payload: safeClone(botAction),
-              });
-            }
-          });
+          this.prepararAccionesBots(currentRound);
         }
       });
 
@@ -1731,12 +1768,13 @@ export class GameStore {
       } catch (e) {}
 
       const totalEsperados = currentPartida.jugadores.length;
-      const totalSeleccionados = Object.keys(this.seleccionesRonda).length;
+      const currentSelections = this.seleccionesPorRonda[currentRound] || {};
+      const totalSeleccionados = Object.keys(currentSelections).length;
 
       if (totalSeleccionados < totalEsperados) {
         this.setNotification(`Has seleccionado ${cartaNombre}. Esperando a los demás jugadores... (${totalSeleccionados} / ${totalEsperados})`);
       } else {
-        this.ejecutarResolucionRonda(Object.values(this.seleccionesRonda));
+        this.ejecutarResolucionRonda(Object.values(currentSelections));
       }
       return;
     }
@@ -2029,6 +2067,16 @@ export class GameStore {
             this.isResolvingRound = false;
             this.registrarEstadisticasFinPartida(this.partida, this.partida.ganadores as any);
             this.setNotification('¡Partida finalizada! Calculando favores de las Musas...');
+            if (this.isAnfitrion && this.sala?.codigo) {
+              this.enviarAccionSala(this.sala.codigo, {
+                type: 'ROUND_STATE_SYNC',
+                ronda: currentPartida.maxRondas,
+                tablero: safeClone(this.tablero),
+                partida: safeClone(this.partida),
+                scoreBreakdown: safeClone(this.scoreBreakdown),
+                isGameOver: true,
+              });
+            }
           } else {
             const nextRound = currentRound + 1;
             this.partida = {
@@ -2041,9 +2089,21 @@ export class GameStore {
             this.hoveredCard = null;
             this.isSubmitting = false;
             this.haSeleccionadoCarta = false;
-            this.seleccionesRonda = {};
             this.isResolvingRound = false;
             this.setNotification('Ronda resuelta. Los astros avanzan.');
+            if (this.isAnfitrion) {
+              this.prepararAccionesBots(nextRound);
+              if (this.sala?.codigo) {
+                this.enviarAccionSala(this.sala.codigo, {
+                  type: 'ROUND_STATE_SYNC',
+                  ronda: nextRound,
+                  tablero: safeClone(this.tablero),
+                  partida: safeClone(this.partida),
+                  scoreBreakdown: safeClone(this.scoreBreakdown),
+                  isGameOver: false,
+                });
+              }
+            }
           }
         });
       }, 600);
@@ -2294,6 +2354,16 @@ export class GameStore {
         this.revolutionAnimating = false;
         this.registrarEstadisticasFinPartida(this.partida, this.partida.ganadores as any);
         this.setNotification('¡Partida finalizada! Calculando favores de las Musas...');
+        if (this.isAnfitrion && this.sala?.codigo) {
+          this.enviarAccionSala(this.sala.codigo, {
+            type: 'ROUND_STATE_SYNC',
+            ronda: currentPartida.maxRondas,
+            tablero: safeClone(this.tablero),
+            partida: safeClone(this.partida),
+            scoreBreakdown: safeClone(this.scoreBreakdown),
+            isGameOver: true,
+          });
+        }
       } else {
         const nextRound = currentRound + 1;
         this.partida = {
@@ -2307,14 +2377,25 @@ export class GameStore {
         this.hoveredCard = null;
         this.isSubmitting = false;
         this.haSeleccionadoCarta = false;
-        this.seleccionesRonda = {};
         this.isResolvingRound = false;
         this.currentExecutingAction = null;
         this.pendingActions = [];
         this.activeMusaIndex = null;
         this.revolutionAnimating = false;
         this.setNotification(`¡Ronda ${nextRound} iniciada! Elige tu próxima carta.`);
-        this.prepararAccionesBots();
+        if (this.isAnfitrion) {
+          this.prepararAccionesBots(nextRound);
+          if (this.sala?.codigo) {
+            this.enviarAccionSala(this.sala.codigo, {
+              type: 'ROUND_STATE_SYNC',
+              ronda: nextRound,
+              tablero: safeClone(this.tablero),
+              partida: safeClone(this.partida),
+              scoreBreakdown: safeClone(this.scoreBreakdown),
+              isGameOver: false,
+            });
+          }
+        }
         setTimeout(() => runInAction(() => { this.notification = null; }), 3500);
       }
     });
