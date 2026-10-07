@@ -245,7 +245,7 @@ export const LobbyView = observer(() => {
                 Partida en Solitario
               </span>
               <p className="text-xs text-zinc-400 leading-relaxed" suppressHydrationWarning>
-                Jugarás como {mounted ? (store.usuario?.username || 'Jugador') : 'Jugador'} contra 2 adversarios controlados por la heurística voraz del servidor (Atenea y Hermes).
+                Jugarás como {mounted ? (store.usuario?.username || 'Jugador') : 'Jugador'} contra 2 adversarios (Atenea y Hermes) controlados por el servidor.
               </p>
             </div>
 

@@ -48,9 +48,6 @@ const GamePage = observer(() => {
           <span className="text-2xl font-serif font-black tracking-widest bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent">
             MUSES
           </span>
-          <span className="text-[10px] uppercase tracking-widest text-amber-500/70 border-l border-amber-600/40 pl-2 hidden sm:inline">
-            Estrategia Mitológica
-          </span>
         </div>
 
         {store.notification && (
