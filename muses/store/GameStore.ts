@@ -841,7 +841,8 @@ export class GameStore {
     }
 
     let addedAnyBot = false;
-    this.partida.jugadores.forEach((j) => {
+    const playerList = this.partida?.jugadores || this.sala?.jugadores || [];
+    playerList.forEach((j) => {
       const isBotPlayer = j.esBot || (j as any).bot || j.nombre?.toLowerCase().includes('bot');
       const pId = j.id ?? j.numeroJugador;
       if (isBotPlayer && !this.seleccionesPorRonda[round][pId]) {
@@ -1909,6 +1910,10 @@ export class GameStore {
           method: 'POST'
         }).catch(() => {});
       } catch (e) {}
+
+      if (this.isAnfitrion) {
+        this.prepararAccionesBots(currentRound);
+      }
 
       const totalEsperados = currentPartida.jugadores?.length || this.sala?.jugadores?.length || 2;
       const currentSelections = this.seleccionesPorRonda[currentRound] || {};
