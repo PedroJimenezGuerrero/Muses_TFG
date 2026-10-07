@@ -73,15 +73,8 @@ export const MusaCard = observer<MusaCardProps>(({
       onClick={onClick}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
-      className={`group relative flex items-center justify-center w-28 h-40 sm:w-36 sm:h-52 rounded-2xl bg-zinc-950 border border-amber-900/40 text-amber-50 shadow-xl select-none transition-all duration-300 hover:scale-105 hover:z-30 cursor-pointer overflow-visible ${highlightStyles} ${className}`}
+      className={`group relative flex items-center justify-center w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 aspect-square rounded-2xl bg-zinc-950 border border-amber-900/40 text-amber-50 shadow-xl select-none transition-all duration-300 hover:scale-105 hover:z-30 cursor-pointer overflow-visible ${highlightStyles} ${className}`}
     >
-      {/* Center Muse indicator badge */}
-      {isCenter && (
-        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 text-[10px] font-bold tracking-wider text-black uppercase shadow-lg border border-amber-300/40 z-30">
-          Centro
-        </span>
-      )}
-
       {/* Full-bleed Illustration */}
       <div className={`relative w-full h-full rounded-2xl overflow-hidden bg-black/60 transition-opacity duration-300 ${contentOpacity}`}>
         {!imgError ? (
@@ -93,13 +86,13 @@ export const MusaCard = observer<MusaCardProps>(({
           />
         ) : (
           <div data-vector-fallback="true" className="w-full h-full flex items-center justify-center p-2">
-            <MusaSvg musa={musa.nombre} size={90} showPoints={false} />
+            <MusaSvg musa={musa.nombre} size={70} showPoints={false} />
           </div>
         )}
 
         {/* Placed Devotion Tokens overlay */}
         {placedTokens.length > 0 && (
-          <div className="absolute inset-x-0 bottom-0 p-1.5 flex flex-wrap items-center justify-center gap-1 bg-gradient-to-t from-black/90 via-black/50 to-transparent rounded-b-2xl z-20">
+          <div className="absolute inset-x-0 bottom-0 p-1 flex flex-wrap items-center justify-center gap-1 bg-gradient-to-t from-black/90 via-black/50 to-transparent rounded-b-2xl z-20">
             {placedTokens.map((token: any, tIdx: number) => {
               const pId = token.jugador?.id ?? token.jugadorId ?? token.jugador?.numeroJugador ?? token.numeroJugador ?? 1;
               const pNum = token.jugador?.numeroJugador ?? token.numeroJugador ?? pId ?? 1;
@@ -109,7 +102,7 @@ export const MusaCard = observer<MusaCardProps>(({
                   id={token.id}
                   playerId={pId}
                   playerNumber={pNum}
-                  size={24}
+                  size={20}
                 />
               );
             })}
