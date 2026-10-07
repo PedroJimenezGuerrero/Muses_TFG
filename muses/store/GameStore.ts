@@ -785,7 +785,7 @@ export class GameStore {
             this.ejecutarResolucionRonda(Object.values(currentSelections));
           }
         }
-      } else if (data.type === 'ROUND_STATE_SYNC' && data.partida) {
+      } else if (data.type === 'ROUND_STATE_SYNC' && data.partida && !this.isAnfitrion) {
         if (data.tablero) this.tablero = data.tablero;
         if (data.partida) this.partida = data.partida;
         if (data.scoreBreakdown) this.scoreBreakdown = data.scoreBreakdown;
