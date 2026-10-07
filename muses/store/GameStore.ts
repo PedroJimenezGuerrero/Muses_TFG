@@ -783,9 +783,24 @@ export class GameStore {
             }
           } else {
             // All players selected for current round!
-            this.ejecutarResolucionRonda(Object.values(currentSelections));
+            if (this.isAnfitrion) {
+              if (this.sala?.codigo) {
+                this.enviarAccionSala(this.sala.codigo, {
+                  type: 'INICIAR_RESOLUCION_RONDA',
+                  ronda: currentRound,
+                  acciones: safeClone(Object.values(currentSelections)),
+                });
+              }
+              this.ejecutarResolucionRonda(Object.values(currentSelections));
+            }
           }
         }
+      } else if (data.type === 'INICIAR_RESOLUCION_RONDA' && data.acciones && !this.isAnfitrion) {
+        const targetR = data.ronda || this.partida?.rondaActual || 1;
+        if (this.partida) {
+          this.partida.rondaActual = targetR;
+        }
+        this.ejecutarResolucionRonda(data.acciones);
       } else if (data.type === 'ROUND_STATE_SYNC' && data.partida && !this.isAnfitrion) {
         this.roundExecutionEpoch++;
         if (data.tablero) this.tablero = data.tablero;
@@ -1776,7 +1791,21 @@ export class GameStore {
       if (totalSeleccionados < totalEsperados) {
         this.setNotification(`Has seleccionado ${cartaNombre}. Esperando a los demás jugadores... (${totalSeleccionados} / ${totalEsperados})`);
       } else {
-        this.ejecutarResolucionRonda(Object.values(currentSelections));
+        if (this.isAnfitrion) {
+          if (this.sala?.codigo) {
+            this.enviarAccionSala(this.sala.codigo, {
+              type: 'INICIAR_RESOLUCION_RONDA',
+              ronda: currentRound,
+              acciones: safeClone(Object.values(currentSelections)),
+            });
+          }
+          this.ejecutarResolucionRonda(Object.values(currentSelections));
+        } else {
+          const isMultiplayer = !!(this.sala && this.sala.jugadores && this.sala.jugadores.length > 1);
+          if (!isMultiplayer) {
+            this.ejecutarResolucionRonda(Object.values(currentSelections));
+          }
+        }
       }
       return;
     }
