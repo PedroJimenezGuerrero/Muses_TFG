@@ -82,16 +82,18 @@ const GamePage = observer(() => {
 
           {store.enPartida && (
             <>
-              <button
-                type="button"
-                aria-label="Reiniciar Partida"
-                onClick={() => store.resetGame()}
-                title="Reiniciar Partida"
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-900 border border-zinc-700 hover:border-amber-400 text-zinc-300 hover:text-amber-200 transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Reiniciar</span>
-              </button>
+              {store.esPartidaContraBots && (
+                <button
+                  type="button"
+                  aria-label="Reiniciar Partida"
+                  onClick={() => store.resetGame()}
+                  title="Reiniciar Partida"
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-900 border border-zinc-700 hover:border-amber-400 text-zinc-300 hover:text-amber-200 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">Reiniciar</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => store.abandonarSala()}
@@ -221,7 +223,7 @@ const GamePage = observer(() => {
           isOpen={store.isGameOver}
           partida={store.partida}
           breakdown={store.scoreBreakdown || { filas: [], totalesPorJugador: [], ganadores: [] }}
-          onRestart={() => store.resetGame()}
+          onRestart={store.esPartidaContraBots ? () => store.resetGame() : undefined}
           onExitToLobby={() => store.abandonarSala()}
         />
       )}

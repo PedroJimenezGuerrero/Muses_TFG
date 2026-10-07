@@ -1567,6 +1567,23 @@ export class GameStore {
     this.isConnected = val;
   }
 
+  get esPartidaContraBots(): boolean {
+    const jugadores = this.partida?.jugadores || this.sala?.jugadores;
+    if (!jugadores || jugadores.length <= 1) {
+      return true;
+    }
+    const myId = this.jugadorActualId;
+    const otherHumans = jugadores.filter((j) => {
+      const isMe =
+        (j.id !== undefined && j.id === myId) ||
+        (this.usuario?.id !== undefined && (j.usuario?.id === this.usuario.id || j.id === this.usuario.id));
+      if (isMe) return false;
+      const isBot = j.esBot || (j as any).bot || j.nombre?.toLowerCase().includes('bot');
+      return !isBot;
+    });
+    return otherHumans.length === 0;
+  }
+
   get isAnfitrion(): boolean {
     if (!this.sala) return true;
     if (this.creeEstaSala) return true;
