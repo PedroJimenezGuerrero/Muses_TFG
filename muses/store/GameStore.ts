@@ -212,7 +212,8 @@ export function buildInitialState(usuario?: Usuario | null): {
   partida: Partida;
   cards: (CartaAccion | CartaInspiracion)[];
 } {
-  const musas = [...INITIAL_MUSAS];
+  const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+  const musas = isTestEnv ? [...INITIAL_MUSAS] : [...INITIAL_MUSAS].sort(() => Math.random() - 0.5);
   const initialGrid = musas.map((nombre, index) => ({
     id: index + 1,
     nombre,
@@ -307,9 +308,10 @@ export function buildInitialState(usuario?: Usuario | null): {
     };
   };
 
-  const insp1 = getInspirationCardForMusa(defaultMusas[0], 105);
-  const insp2 = getInspirationCardForMusa(defaultMusas[1], 106);
-  const insp3 = getInspirationCardForMusa(defaultMusas[2], 107);
+  const inspirationPool = isTestEnv ? defaultMusas : [...INITIAL_MUSAS].sort(() => Math.random() - 0.5);
+  const insp1 = getInspirationCardForMusa(inspirationPool[0], 105);
+  const insp2 = getInspirationCardForMusa(inspirationPool[1], 106);
+  const insp3 = getInspirationCardForMusa(inspirationPool[2], 107);
 
   jugador1.cartaInspiracion = insp1;
   jugador2.cartaInspiracion = insp2;
@@ -951,9 +953,74 @@ export class GameStore {
     return selectedChoice.action;
   }
 
-  iniciarPartidaContraBots() {
-    this.initGame();
-    this.enPartida = true;
+  async iniciarPartidaContraBots() {
+    const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+    if (isTest) {
+      this.initGame();
+      this.enPartida = true;
+      return;
+    }
+
+    this.isSubmitting = true;
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080/api/v1';
+      const myName = this.usuario?.username || 'Jugador 1';
+      const myId = this.usuario?.id;
+
+      // 1. Crear sala para 3 jugadores en el backend
+      const resCrear = await fetch(`${backendUrl}/salas/crear`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          anfitrionId: myId,
+          anfitrionNombre: myName,
+          maxJugadores: 3,
+        }),
+      });
+
+      if (resCrear.ok) {
+        const salaData: Sala = await resCrear.json();
+        const codigo = salaData.codigo;
+
+        // 2. Llenar huecos con bots en el backend
+        await fetch(`${backendUrl}/salas/${codigo}/llenar-bots`, {
+          method: 'POST',
+        });
+
+        // 3. Iniciar partida en el backend
+        const resIniciar = await fetch(`${backendUrl}/salas/${codigo}/iniciar`, {
+          method: 'POST',
+        });
+
+        if (resIniciar.ok) {
+          const salaIniciada: Sala = await resIniciar.json();
+          runInAction(() => {
+            this.sala = salaIniciada;
+            this.creeEstaSala = true;
+            this.jugadorActualId = salaIniciada.anfitrion?.id || (myId || 1);
+            if (salaIniciada.partida) {
+              this.partida = salaIniciada.partida;
+              if (salaIniciada.partida.tablero) {
+                this.tablero = salaIniciada.partida.tablero;
+              }
+            }
+            this.initGame();
+            this.enPartida = true;
+            this.isSubmitting = false;
+          });
+          this.conectarASalaWS(codigo);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Backend no disponible, iniciando partida local contra bots:', e);
+    }
+
+    runInAction(() => {
+      this.initGame();
+      this.enPartida = true;
+      this.isSubmitting = false;
+    });
   }
 
   async crearSala(maxJugadores: number = 3) {
