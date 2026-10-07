@@ -822,7 +822,7 @@ export class GameStore {
         if (this.isGameOver) {
           this.setNotification('¡Partida finalizada! Calculando favores de las Musas...');
         } else {
-          const currentR = this.partida.rondaActual;
+          const currentR = this.partida?.rondaActual || data.ronda || 1;
           this.setNotification(`¡Ronda ${currentR} iniciada! Elige tu próxima carta.`);
           setTimeout(() => runInAction(() => { this.notification = null; }), 3000);
         }
@@ -2462,9 +2462,11 @@ export class GameStore {
         if (pState.isGameOver !== undefined) this.isGameOver = pState.isGameOver;
       }
 
+      const finalTablero = this.tablero || currentTablero;
+
       if (this.isGameOver || isFinishing) {
         if (!this.scoreBreakdown) {
-          const breakdown = calculateScoreBreakdown(this.tablero, updatedJugadores);
+          const breakdown = calculateScoreBreakdown(finalTablero, updatedJugadores);
           const finalJugadores = updatedJugadores.map((j) => {
             let totalPts = 0;
             Object.values(breakdown.matrix || {}).forEach((mRow: any) => {
@@ -2482,7 +2484,7 @@ export class GameStore {
           this.partida = {
             ...(this.partida || currentPartida),
             rondaActual: (this.partida || currentPartida).maxRondas,
-            tablero: this.tablero,
+            tablero: finalTablero,
             jugadores: finalJugadores,
             ganadores: winners.map((w) => ({ id: w.id, username: w.nombre })),
           };
@@ -2505,7 +2507,7 @@ export class GameStore {
           this.enviarAccionSala(this.sala.codigo, {
             type: 'ROUND_STATE_SYNC',
             ronda: currentPartida.maxRondas,
-            tablero: safeClone(this.tablero),
+            tablero: safeClone(finalTablero),
             partida: safeClone(this.partida),
             scoreBreakdown: safeClone(this.scoreBreakdown),
             isGameOver: true,
@@ -2517,7 +2519,7 @@ export class GameStore {
           this.partida = {
             ...(this.partida || currentPartida),
             rondaActual: nextRound,
-            tablero: this.tablero,
+            tablero: finalTablero,
             jugadores: updatedJugadores,
           };
         }
