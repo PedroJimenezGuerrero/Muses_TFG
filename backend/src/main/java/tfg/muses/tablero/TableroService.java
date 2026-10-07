@@ -141,6 +141,15 @@ public class TableroService {
         return tablero;
     }
 
+    public Tablero aplicarRevolucion(Tablero tablero, Integer posicionAstro) {
+        try {
+            tablero = revolucion(tablero, posicionAstro);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return save(tablero);
+    }
+
     public void devocionSol(Tablero tablero, Jugador jugador) {
         Musa musaSol = getMusasEnAstros(tablero).get("sol");
         musaService.colocarTokens(musaSol, 2, jugador);

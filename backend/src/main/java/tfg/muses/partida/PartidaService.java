@@ -23,9 +23,11 @@ import tfg.muses.carta.CartaAccion;
 import tfg.muses.carta.CartaBase;
 import tfg.muses.carta.CartaInspiracion;
 import tfg.muses.carta.CartaService;
+import tfg.muses.carta.TipoAccion;
 import tfg.muses.jugador.Jugador;
 import tfg.muses.jugador.JugadorService;
 import tfg.muses.musa.Musa;
+import tfg.muses.musa.MusaService;
 import tfg.muses.musa.TipoMusa;
 import tfg.muses.puntuacion.PuntuacionService;
 import tfg.muses.tablero.Tablero;
@@ -52,6 +54,10 @@ public class PartidaService {
     @Autowired
     @org.springframework.context.annotation.Lazy
     private TableroService tableroService;
+
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private MusaService musaService;
 
     @Autowired
     @org.springframework.context.annotation.Lazy
@@ -210,15 +216,29 @@ public class PartidaService {
         }
 
         Map<Long, Long> selecciones = partida.getSeleccionesRonda();
+        Map<Long, List<Jugador>> jugadoresPorCarta = new HashMap<>();
+        for (Map.Entry<Long, Long> entry : selecciones.entrySet()) {
+            Long jId = entry.getKey();
+            Long cId = entry.getValue();
+            Jugador j = jugadorService.getById(jId);
+            if (j != null) {
+                jugadoresPorCarta.computeIfAbsent(cId, k -> new ArrayList<>()).add(j);
+            }
+        }
+
         List<CartaBase> cartasOrdenadasPorVotos = obtenerCartasOrdenadas(selecciones);
 
-        // Avisa mediante websocket al frontend de que ya se han seleccionado todas las
-        // cartas
+        // Avisa mediante websocket al frontend de que ya se han seleccionado todas las cartas
         messagingTemplate.convertAndSend("/topic/partida/" + partida.getId() + "/cartas-seleccionadas",
                 cartasOrdenadasPorVotos);
 
-        cartasOrdenadasPorVotos
-                .forEach(cartaBase -> cartaService.ejecutarEfecto(cartaBase, partida.getTablero(), jugador));
+        for (CartaBase cartaBase : cartasOrdenadasPorVotos) {
+            List<Jugador> votantes = jugadoresPorCarta.getOrDefault(cartaBase.getId(), Collections.emptyList());
+            for (Jugador j : votantes) {
+                cartaService.ejecutarEfecto(cartaBase, partida.getTablero(), j);
+            }
+        }
+        tableroService.save(partida.getTablero());
 
         finalizarRonda(partida);
     }

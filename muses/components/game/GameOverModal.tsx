@@ -10,6 +10,7 @@ import { ScoreBreakdown } from '@/types/scoring';
 export interface GameOverModalProps {
   isOpen: boolean;
   partida: Partida;
+  currentUserId?: number;
   breakdown: ScoreBreakdown;
   onRestart: () => void;
   onExitToLobby?: () => void;
@@ -31,32 +32,13 @@ const MUSAS_ORDER: TipoMusa[] = [
 export const GameOverModal = observer<GameOverModalProps>(({
   isOpen,
   partida,
+  currentUserId,
   breakdown,
   onRestart,
   onExitToLobby,
   className = '',
 }) => {
   const [hoveredTieMusa, setHoveredTieMusa] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      try {
-        const testCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
-        if (testCanvas && typeof testCanvas.getContext === 'function' && testCanvas.getContext('2d')) {
-          confetti({
-            particleCount: 90,
-            spread: 80,
-            origin: { y: 0.6 },
-            colors: ['#F59E0B', '#FCD34D', '#6366F1', '#A855F7', '#EC4899'],
-          });
-        }
-      } catch {
-        // Fallback for non-browser/test environments
-      }
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
 
   // Determine winners and rankings
   const jugadores = partida?.jugadores ? [...partida.jugadores] : [];
@@ -66,6 +48,34 @@ export const GameOverModal = observer<GameOverModalProps>(({
   const winnerJugadores = jugadores.filter((j) => j.puntuacionTotal === highestScore);
   const isJointWinner =
     winnerJugadores.length > 1 || (partida?.ganadores && partida.ganadores.length > 1);
+
+  // Check if viewing user is among the winners
+  const viewingUserIsWinner = winnerJugadores.some((w) => {
+    if (currentUserId !== undefined) {
+      return w.id === currentUserId || w.numeroJugador === currentUserId;
+    }
+    return w.numeroJugador === 1;
+  });
+
+  useEffect(() => {
+    if (isOpen && viewingUserIsWinner) {
+      try {
+        const testCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+        if (testCanvas && typeof testCanvas.getContext === 'function' && testCanvas.getContext('2d')) {
+          confetti({
+            particleCount: 80,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#F59E0B', '#FCD34D', '#6366F1', '#A855F7', '#EC4899'],
+          });
+        }
+      } catch {
+        // Fallback for non-browser/test environments
+      }
+    }
+  }, [isOpen, viewingUserIsWinner]);
+
+  if (!isOpen) return null;
 
   // Group players by podium place
   const firstPlace = isJointWinner
@@ -82,46 +92,59 @@ export const GameOverModal = observer<GameOverModalProps>(({
     ? [jugadores[2]]
     : [];
 
+  // Determine header title
+  const headerTitle = isJointWinner
+    ? '¡Empate en primer puesto!'
+    : viewingUserIsWinner
+    ? '¡Victoria!'
+    : 'Partida Finalizada';
+
+  const headerSubtitle = isJointWinner
+    ? '¡Múltiples dioses comparten el favor supremo de las Musas!'
+    : viewingUserIsWinner
+    ? '¡Has conseguido el favor supremo de las Musas!'
+    : 'Las 9 Musas han consagrado sus favores tras 9 rondas';
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Fin de Partida"
       data-testid="game-over-modal"
-      className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto ${className}`}
+      className={`fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto ${className}`}
     >
-      <div className="relative w-full max-w-4xl bg-gradient-to-b from-zinc-900 via-zinc-950 to-black border border-amber-600/40 rounded-3xl p-5 sm:p-8 shadow-2xl text-amber-50 flex flex-col gap-6 max-h-[92vh] overflow-y-auto">
+      <div className="relative w-full max-w-4xl bg-gradient-to-b from-zinc-900 via-zinc-950 to-black border border-amber-600/40 rounded-3xl p-4 sm:p-6 shadow-2xl text-amber-50 flex flex-col gap-3.5 max-h-[96vh] overflow-y-auto">
         {/* Header */}
-        <div className="text-center space-y-1">
-          <div className="inline-flex items-center justify-center p-3 rounded-full bg-amber-500/10 border border-amber-400/30 text-amber-400 mb-2">
-            <Trophy className="w-8 h-8 sm:w-10 sm:h-10 animate-bounce" />
+        <div className="text-center space-y-0.5 shrink-0">
+          <div className="inline-flex items-center justify-center p-2 rounded-full bg-amber-500/10 border border-amber-400/30 text-amber-400 mb-1">
+            <Trophy className="w-6 h-6 sm:w-7 sm:h-7 animate-bounce" />
           </div>
-          <h2 className="text-2xl sm:text-4xl font-serif font-black tracking-wide bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent">
-            {isJointWinner ? '¡Empate en primer puesto!' : '¡Victoria Divina!'}
+          <h2 className="text-2xl sm:text-3xl font-serif font-black tracking-wide bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent">
+            {headerTitle}
           </h2>
-          <p className="text-xs sm:text-sm text-zinc-400">
-            Las 9 Musas han consagrado sus favores tras 9 rondas de devoción y revolución
+          <p className="text-xs text-zinc-400">
+            {headerSubtitle}
           </p>
         </div>
 
         {/* Victory Podium */}
         <div
           data-testid="victory-podium"
-          className="grid grid-cols-3 items-end justify-center gap-2 sm:gap-4 my-2 px-2 sm:px-6"
+          className="grid grid-cols-3 items-end justify-center gap-2 sm:gap-3 px-2 sm:px-4 shrink-0 my-1"
         >
           {/* 2nd Place */}
           <div
             data-testid="podium-place-2"
             className="flex flex-col items-center justify-end text-center"
           >
-            <Medal className="w-6 h-6 text-slate-300 mb-1" />
-            <div className="font-serif font-bold text-xs sm:text-base text-slate-200 truncate max-w-full">
+            <Medal className="w-5 h-5 text-slate-300 mb-0.5" />
+            <div className="font-serif font-bold text-xs sm:text-sm text-slate-200 truncate max-w-full">
               {secondPlace.map((j) => j.nombre).join(' & ') || (isJointWinner ? '-' : 'Atenea')}
             </div>
-            <div className="text-[11px] sm:text-xs text-slate-400 mb-1">
+            <div className="text-[10px] sm:text-xs text-slate-400 mb-0.5">
               {secondPlace[0] ? `${secondPlace[0].puntuacionTotal} pts` : ''}
             </div>
-            <div className="w-full h-20 sm:h-28 rounded-t-2xl bg-gradient-to-t from-slate-800 to-slate-600/80 border-t-2 border-slate-300 flex items-center justify-center font-black text-xl sm:text-3xl text-slate-300 shadow-lg">
+            <div className="w-full h-12 sm:h-16 rounded-t-xl bg-gradient-to-t from-slate-800 to-slate-600/80 border-t-2 border-slate-300 flex items-center justify-center font-black text-lg sm:text-2xl text-slate-300 shadow-md">
               2
             </div>
           </div>
@@ -131,14 +154,14 @@ export const GameOverModal = observer<GameOverModalProps>(({
             data-testid="podium-place-1"
             className="flex flex-col items-center justify-end text-center z-10"
           >
-            <Crown className="w-8 h-8 text-amber-400 mb-1 animate-pulse" />
-            <div className="font-serif font-extrabold text-sm sm:text-lg text-amber-300 truncate max-w-full">
+            <Crown className="w-6 h-6 text-amber-400 mb-0.5 animate-pulse" />
+            <div className="font-serif font-extrabold text-xs sm:text-base text-amber-300 truncate max-w-full">
               {firstPlace.map((j) => j.nombre).join(' & ') || 'Apolo'}
             </div>
-            <div className="text-xs sm:text-sm font-semibold text-amber-400/90 mb-1">
+            <div className="text-[11px] sm:text-xs font-semibold text-amber-400/90 mb-0.5">
               {firstPlace[0] ? `${firstPlace[0].puntuacionTotal} pts` : ''}
             </div>
-            <div className="w-full h-28 sm:h-36 rounded-t-2xl bg-gradient-to-t from-amber-700 via-amber-500 to-amber-400 border-t-4 border-amber-200 flex items-center justify-center font-black text-2xl sm:text-4xl text-amber-950 shadow-2xl">
+            <div className="w-full h-16 sm:h-22 rounded-t-xl bg-gradient-to-t from-amber-700 via-amber-500 to-amber-400 border-t-4 border-amber-200 flex items-center justify-center font-black text-xl sm:text-3xl text-amber-950 shadow-xl">
               1
             </div>
           </div>
@@ -148,58 +171,58 @@ export const GameOverModal = observer<GameOverModalProps>(({
             data-testid="podium-place-3"
             className="flex flex-col items-center justify-end text-center"
           >
-            <Medal className="w-5 h-5 text-amber-700 mb-1" />
-            <div className="font-serif font-bold text-xs sm:text-base text-amber-600/90 truncate max-w-full">
+            <Medal className="w-4 h-4 text-amber-700 mb-0.5" />
+            <div className="font-serif font-bold text-xs sm:text-sm text-amber-600/90 truncate max-w-full">
               {thirdPlace.map((j) => j.nombre).join(' & ') || '-'}
             </div>
-            <div className="text-[11px] sm:text-xs text-amber-700/80 mb-1">
+            <div className="text-[10px] sm:text-xs text-amber-700/80 mb-0.5">
               {thirdPlace[0] ? `${thirdPlace[0].puntuacionTotal} pts` : ''}
             </div>
-            <div className="w-full h-14 sm:h-20 rounded-t-2xl bg-gradient-to-t from-amber-950 to-amber-800/70 border-t-2 border-amber-700 flex items-center justify-center font-black text-lg sm:text-2xl text-amber-600 shadow-md">
+            <div className="w-full h-9 sm:h-12 rounded-t-xl bg-gradient-to-t from-amber-950 to-amber-800/70 border-t-2 border-amber-700 flex items-center justify-center font-black text-base sm:text-xl text-amber-600 shadow-sm">
               3
             </div>
           </div>
         </div>
 
         {/* 9xN Breakdown Table */}
-        <div className="space-y-2">
+        <div className="space-y-1.5 flex-1 min-h-0">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-amber-400/80">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-400/80">
               Desglose de Puntuación por Musa
             </h3>
             {hoveredTieMusa && (
-              <span className="text-xs text-amber-300 animate-fadeIn font-mono">
-                Empate resuelto: puntos repartidos según reglas de cálculo
+              <span className="text-[11px] text-amber-300 animate-fadeIn font-mono">
+                Empate resuelto: puntos repartidos según reglas
               </span>
             )}
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-zinc-950/60 shadow-inner">
+          <div className="overflow-x-auto rounded-xl border border-white/10 bg-zinc-950/60 shadow-inner">
             <table
               role="table"
               aria-label="Desglose de puntuación"
               data-testid="podium-table"
-              className="w-full text-left text-xs sm:text-sm"
+              className="w-full text-left text-xs"
             >
-              <thead className="bg-zinc-900/80 border-b border-white/10 text-zinc-400 uppercase text-[10px] sm:text-xs tracking-wider">
+              <thead className="bg-zinc-900/80 border-b border-white/10 text-zinc-400 uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="py-2.5 px-3 font-semibold">Musa</th>
+                  <th className="py-1.5 px-2.5 font-semibold">Musa</th>
                   {jugadores.map((jugador) => (
-                    <th key={jugador.id} colSpan={2} className="py-2.5 px-3 text-center font-semibold text-amber-200">
+                    <th key={jugador.id} colSpan={2} className="py-1.5 px-2 text-center font-semibold text-amber-200">
                       {jugador.nombre}
                     </th>
                   ))}
-                  <th className="py-2.5 px-3 text-center font-semibold">Resolución</th>
+                  <th className="py-1.5 px-2 text-center font-semibold">Resolución</th>
                 </tr>
-                <tr className="border-b border-white/5 text-[9px] sm:text-[10px] text-zinc-500">
-                  <th className="py-1 px-3"></th>
+                <tr className="border-b border-white/5 text-[9px] text-zinc-500">
+                  <th className="py-0.5 px-2.5"></th>
                   {jugadores.map((jugador) => (
                     <React.Fragment key={`sub-${jugador.id}`}>
-                      <th className="py-1 px-2 text-center">Tokens</th>
-                      <th className="py-1 px-2 text-center text-amber-400">Puntos</th>
+                      <th className="py-0.5 px-1.5 text-center">Tokens</th>
+                      <th className="py-0.5 px-1.5 text-center text-amber-400">Puntos</th>
                     </React.Fragment>
                   ))}
-                  <th className="py-1 px-3"></th>
+                  <th className="py-0.5 px-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -226,7 +249,7 @@ export const GameOverModal = observer<GameOverModalProps>(({
                       data-testid={`breakdown-row-${musa}`}
                       className="hover:bg-white/[0.02] transition-colors"
                     >
-                      <td className="py-2 px-3 font-serif font-bold text-amber-100 flex items-center gap-1.5">
+                      <td className="py-1 px-2.5 font-serif font-bold text-amber-100 flex items-center gap-1">
                         <span>{musa}</span>
                       </td>
 
@@ -241,13 +264,13 @@ export const GameOverModal = observer<GameOverModalProps>(({
                           <React.Fragment key={`cell-${musa}-${jugador.id}`}>
                             <td
                               data-player={jugador.nombre}
-                              className="py-2 px-2 text-center font-mono text-zinc-300"
+                              className="py-1 px-1.5 text-center font-mono text-zinc-300"
                             >
                               {item.tokens ?? 0}
                             </td>
                             <td
                               data-player={jugador.nombre}
-                              className="py-2 px-2 text-center font-mono font-bold text-amber-400"
+                              className="py-1 px-1.5 text-center font-mono font-bold text-amber-400"
                             >
                               {pts}
                             </td>
@@ -255,13 +278,13 @@ export const GameOverModal = observer<GameOverModalProps>(({
                         );
                       })}
 
-                      <td className="py-2 px-3 text-center">
+                      <td className="py-1 px-2 text-center">
                         {isTied ? (
                           <span
                             data-tie-badge="true"
                             onMouseEnter={() => setHoveredTieMusa(musa)}
                             onMouseLeave={() => setHoveredTieMusa(null)}
-                            className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-400/40 cursor-help transition-all hover:bg-purple-500/30"
+                            className="inline-block px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-400/40 cursor-help transition-all hover:bg-purple-500/30"
                             title="Empate resuelto: división proporcional"
                           >
                             =
@@ -276,37 +299,37 @@ export const GameOverModal = observer<GameOverModalProps>(({
               </tbody>
               <tfoot className="border-t-2 border-amber-500/30 bg-zinc-900/90 font-bold">
                 <tr data-testid="breakdown-total-row">
-                  <td className="py-3 px-3 uppercase text-xs tracking-wider text-amber-300">
+                  <td className="py-2 px-2.5 uppercase text-[11px] tracking-wider text-amber-300">
                     Total
                   </td>
                   {jugadores.map((jugador) => (
                     <React.Fragment key={`tot-${jugador.id}`}>
-                      <td className="py-3 px-2 text-center text-zinc-400 text-xs font-mono">
+                      <td className="py-2 px-1.5 text-center text-zinc-400 text-[11px] font-mono">
                         —
                       </td>
-                      <td className="py-3 px-2 text-center font-mono text-base font-extrabold text-amber-300">
+                      <td className="py-2 px-1.5 text-center font-mono text-sm font-extrabold text-amber-300">
                         {jugador.puntuacionTotal}
                       </td>
                     </React.Fragment>
                   ))}
-                  <td className="py-3 px-3"></td>
+                  <td className="py-2 px-2"></td>
                 </tr>
               </tfoot>
             </table>
           </div>
         </div>
 
-        {/* Action Buttons: Volver al Lobby / Nueva Partida */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+        {/* Action Buttons: Volver al Lobby / Nueva Partida (always visible, no scroll required) */}
+        <div className="flex flex-row items-center justify-center gap-3 pt-1 shrink-0">
           {onExitToLobby && (
             <button
               type="button"
               data-testid="exit-lobby-btn"
               onClick={onExitToLobby}
               aria-label="Salir al Lobby"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-zinc-200 font-semibold text-sm sm:text-base shadow-lg transition-all cursor-pointer"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-zinc-200 font-semibold text-xs sm:text-sm shadow-md transition-all cursor-pointer"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4" />
               <span>Volver al Lobby</span>
             </button>
           )}
@@ -316,9 +339,9 @@ export const GameOverModal = observer<GameOverModalProps>(({
             data-testid="restart-game-btn"
             onClick={onRestart}
             aria-label="Nueva Partida"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-bold text-sm sm:text-base shadow-xl shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-bold text-xs sm:text-sm shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
           >
-            <RotateCcw className="w-5 h-5" />
+            <RotateCcw className="w-4 h-4" />
             <span>Nueva Partida</span>
           </button>
         </div>

@@ -1677,23 +1677,50 @@ export class GameStore {
 
     const currentCards = [...this.cards];
     
-    // Regla oficial Muses: La acción seleccionada por más jugadores se resuelve primero.
-    // En caso de empate en votos, desempata la prioridad intrínseca (Inspiración 1 -> Devoción Sol 2 -> Rev Sol 3 -> Rev Luna 4 -> Dev Luna 5).
-    const actionCounts: Record<string, number> = {};
+    // Regla oficial Muses: Agrupar acciones por tipo.
+    // Acciones comunes con el mismo tipoAccion forman un único grupo de ejecución.
+    type ActionGroup = {
+      tipoAccion: string;
+      prioridad: number;
+      cartaNombre: string;
+      astroPos?: number;
+      musaName?: TipoMusa;
+      actions: PlannedAction[];
+    };
+
+    const groupMap: Record<string, ActionGroup> = {};
     for (const act of actions) {
-      actionCounts[act.tipoAccion] = (actionCounts[act.tipoAccion] || 0) + 1;
+      const groupKey = act.tipoAccion === 'INSPIRACION'
+        ? `INSPIRACION_${act.jugadorId}_${act.musaName}`
+        : act.tipoAccion;
+
+      if (!groupMap[groupKey]) {
+        groupMap[groupKey] = {
+          tipoAccion: act.tipoAccion,
+          prioridad: act.prioridad,
+          cartaNombre: act.cartaNombre,
+          astroPos: act.astroPos,
+          musaName: act.musaName,
+          actions: [],
+        };
+      }
+      groupMap[groupKey].actions.push(act);
     }
 
-    const actionsToExecute = [...actions].sort((a, b) => {
-      const countA = actionCounts[a.tipoAccion] || 0;
-      const countB = actionCounts[b.tipoAccion] || 0;
+    // Regla oficial Muses: La acción seleccionada por más jugadores se resuelve primero.
+    // En caso de empate en votos, desempata la prioridad intrínseca (Inspiración 1 -> Devoción Sol 2 -> Rev Sol 3 -> Rev Luna 4 -> Dev Luna 5).
+    const actionGroups = Object.values(groupMap).sort((a, b) => {
+      const countA = a.actions.length;
+      const countB = b.actions.length;
       if (countA !== countB) {
         return countB - countA;
       }
       return a.prioridad - b.prioridad;
     });
+
+    const flattenedActions = actionGroups.flatMap((g) => g.actions);
     runInAction(() => {
-      this.pendingActions = [...actionsToExecute];
+      this.pendingActions = [...flattenedActions];
       this.currentExecutingAction = null;
     });
     const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
@@ -1707,55 +1734,11 @@ export class GameStore {
           const tokensDeductMap: Record<number, number> = {};
           const newLogs: ActionResolutionLog[] = [];
 
-          for (const act of actionsToExecute) {
-            tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0);
-
-            if (act.tipoAccion === 'DEVOCION_SOL' || act.tipoAccion === 'DEVOCION_LUNA') {
-              const targetIndex = mapAstroToGrid(act.astroPos!);
-              tokensDeductMap[act.jugadorId] += 2;
-              const newTokens = Array.from({ length: 2 }, () => ({
-                id: getNextTokenId(),
-                colocado: true,
-                jugador: act.jugador,
-                jugadorId: act.jugadorId,
-              }));
-              updatedGrid = updatedGrid.map((m, idx) =>
-                idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] } : m
-              );
-              newLogs.push({
-                jugadorNombre: act.jugadorNombre,
-                jugadorNumero: act.jugadorNumero,
-                cartaNombre: act.cartaNombre,
-                tipoAccion: act.tipoAccion,
-                prioridad: act.prioridad,
-                detalle: `Coloca 2 fichas en ${updatedGrid[targetIndex].nombre}`,
-              });
-            } else if (act.tipoAccion === 'REVOLUCION_SOL' || act.tipoAccion === 'REVOLUCION_LUNA') {
-              tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + 1;
-              const newToken = {
-                id: getNextTokenId(),
-                colocado: true,
-                jugador: act.jugador,
-                jugadorId: act.jugadorId,
-              };
-              updatedGrid = updatedGrid.map((m, idx) =>
-                idx === 4 ? { ...m, tokensColocados: [...m.tokensColocados, newToken] } : m
-              );
-              const targetAstroPos = act.astroPos !== undefined ? act.astroPos : (act.tipoAccion === 'REVOLUCION_SOL' ? this.tablero.solPos : this.tablero.lunaPos);
-              updatedGrid = applyRevolution(updatedGrid, targetAstroPos);
-              newLogs.push({
-                jugadorNombre: act.jugadorNombre,
-                jugadorNumero: act.jugadorNumero,
-                cartaNombre: act.cartaNombre,
-                tipoAccion: act.tipoAccion,
-                prioridad: act.prioridad,
-                detalle: `Coloca 1 ficha al centro y rota el semiciclo ${act.tipoAccion === 'REVOLUCION_SOL' ? 'solar' : 'lunar'}`,
-              });
-            } else if (act.tipoAccion === 'INSPIRACION') {
-              const musaName = act.musaName!;
-              const targetCells = getInspirationTargetCells(musaName, currentTablero.solPos);
-              tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + targetCells.length * 2;
-              targetCells.forEach((targetIndex) => {
+          for (const group of actionGroups) {
+            if (group.tipoAccion === 'DEVOCION_SOL' || group.tipoAccion === 'DEVOCION_LUNA') {
+              const targetIndex = mapAstroToGrid(group.astroPos!);
+              for (const act of group.actions) {
+                tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + 2;
                 const newTokens = Array.from({ length: 2 }, () => ({
                   id: getNextTokenId(),
                   colocado: true,
@@ -1765,20 +1748,68 @@ export class GameStore {
                 updatedGrid = updatedGrid.map((m, idx) =>
                   idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] } : m
                 );
-              });
-              const cardIdx = currentCards.findIndex((c) => c.id === act.rawCard?.id);
-              if (cardIdx !== -1) {
-                currentCards[cardIdx] = { ...currentCards[cardIdx], usada: true } as CartaInspiracion;
-                this.cards = currentCards;
+                newLogs.push({
+                  jugadorNombre: act.jugadorNombre,
+                  jugadorNumero: act.jugadorNumero,
+                  cartaNombre: act.cartaNombre,
+                  tipoAccion: act.tipoAccion,
+                  prioridad: act.prioridad,
+                  detalle: `Coloca 2 fichas en ${updatedGrid[targetIndex].nombre}`,
+                });
               }
-              newLogs.push({
-                jugadorNombre: act.jugadorNombre,
-                jugadorNumero: act.jugadorNumero,
-                cartaNombre: act.cartaNombre,
-                tipoAccion: 'INSPIRACION',
-                prioridad: act.prioridad,
-                detalle: `Coloca fichas geométricas según el Sol`,
-              });
+            } else if (group.tipoAccion === 'REVOLUCION_SOL' || group.tipoAccion === 'REVOLUCION_LUNA') {
+              for (const act of group.actions) {
+                tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + 1;
+                const newToken = {
+                  id: getNextTokenId(),
+                  colocado: true,
+                  jugador: act.jugador,
+                  jugadorId: act.jugadorId,
+                };
+                updatedGrid = updatedGrid.map((m, idx) =>
+                  idx === 4 ? { ...m, tokensColocados: [...m.tokensColocados, newToken] } : m
+                );
+                newLogs.push({
+                  jugadorNombre: act.jugadorNombre,
+                  jugadorNumero: act.jugadorNumero,
+                  cartaNombre: act.cartaNombre,
+                  tipoAccion: act.tipoAccion,
+                  prioridad: act.prioridad,
+                  detalle: `Coloca 1 ficha al centro y rota el semiciclo ${group.tipoAccion === 'REVOLUCION_SOL' ? 'solar' : 'lunar'}`,
+                });
+              }
+              const targetAstroPos = group.astroPos !== undefined ? group.astroPos : (group.tipoAccion === 'REVOLUCION_SOL' ? this.tablero.solPos : this.tablero.lunaPos);
+              updatedGrid = applyRevolution(updatedGrid, targetAstroPos);
+            } else if (group.tipoAccion === 'INSPIRACION') {
+              for (const act of group.actions) {
+                const musaName = act.musaName!;
+                const targetCells = getInspirationTargetCells(musaName, currentTablero.solPos);
+                tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + targetCells.length * 2;
+                targetCells.forEach((targetIndex) => {
+                  const newTokens = Array.from({ length: 2 }, () => ({
+                    id: getNextTokenId(),
+                    colocado: true,
+                    jugador: act.jugador,
+                    jugadorId: act.jugadorId,
+                  }));
+                  updatedGrid = updatedGrid.map((m, idx) =>
+                    idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] } : m
+                  );
+                });
+                const cardIdx = currentCards.findIndex((c) => c.id === act.rawCard?.id);
+                if (cardIdx !== -1) {
+                  currentCards[cardIdx] = { ...currentCards[cardIdx], usada: true } as CartaInspiracion;
+                  this.cards = currentCards;
+                }
+                newLogs.push({
+                  jugadorNombre: act.jugadorNombre,
+                  jugadorNumero: act.jugadorNumero,
+                  cartaNombre: act.cartaNombre,
+                  tipoAccion: 'INSPIRACION',
+                  prioridad: act.prioridad,
+                  detalle: `Coloca fichas geométricas según el Sol`,
+                });
+              }
             }
           }
 
@@ -1860,41 +1891,47 @@ export class GameStore {
     const newLogs: ActionResolutionLog[] = [];
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    for (let actIdx = 0; actIdx < actionsToExecute.length; actIdx++) {
-      const act = actionsToExecute[actIdx];
+    for (let grpIdx = 0; grpIdx < actionGroups.length; grpIdx++) {
+      const group = actionGroups[grpIdx];
       if (!this.tablero) break;
 
-      tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0);
-
+      const playerNames = group.actions.map((a) => a.jugadorNombre).join(', ');
       let detalle = 'Ejecutando acción de la ronda...';
-      if (act.tipoAccion === 'DEVOCION_SOL' || act.tipoAccion === 'DEVOCION_LUNA') {
-        const targetIndex = mapAstroToGrid(act.astroPos!);
+      if (group.tipoAccion === 'DEVOCION_SOL' || group.tipoAccion === 'DEVOCION_LUNA') {
+        const targetIndex = mapAstroToGrid(group.astroPos!);
         const musa = this.tablero.grid[targetIndex];
-        detalle = `Coloca 2 fichas de devoción en ${musa?.nombre || 'la musa'} (${act.tipoAccion === 'DEVOCION_SOL' ? 'Sol' : 'Luna'})`;
-      } else if (act.tipoAccion === 'REVOLUCION_SOL' || act.tipoAccion === 'REVOLUCION_LUNA') {
-        detalle = `Coloca 1 ficha al centro y rota el semiciclo ${act.tipoAccion === 'REVOLUCION_SOL' ? 'solar' : 'lunar'}`;
-      } else if (act.tipoAccion === 'INSPIRACION') {
-        detalle = `Coloca fichas geométricas según el Sol (${act.musaName || 'Inspiración'})`;
+        detalle = `${playerNames} coloca(n) 2 fichas de devoción en ${musa?.nombre || 'la musa'} (${group.tipoAccion === 'DEVOCION_SOL' ? 'Sol' : 'Luna'})`;
+      } else if (group.tipoAccion === 'REVOLUCION_SOL' || group.tipoAccion === 'REVOLUCION_LUNA') {
+        detalle = `${playerNames} coloca(n) 1 ficha al centro y rota el semiciclo ${group.tipoAccion === 'REVOLUCION_SOL' ? 'solar' : 'lunar'}`;
+      } else if (group.tipoAccion === 'INSPIRACION') {
+        detalle = `${playerNames} coloca fichas geométricas según el Sol`;
       }
-      act.detalle = detalle;
 
       runInAction(() => {
-        this.currentExecutingAction = { ...act };
-        this.pendingActions = actionsToExecute.slice(actIdx + 1);
-        this.setNotification(`Resolviendo: ${act.jugadorNombre} juega ${act.cartaNombre}...`);
+        this.currentExecutingAction = {
+          ...group.actions[0],
+          cartaNombre: group.cartaNombre,
+          detalle,
+        };
+        this.pendingActions = actionGroups.slice(grpIdx + 1).flatMap((g) => g.actions);
+        this.setNotification(`Resolviendo: ${group.cartaNombre} (${playerNames})...`);
       });
       await sleep(1000);
 
-      if (act.tipoAccion === 'DEVOCION_SOL' || act.tipoAccion === 'DEVOCION_LUNA') {
-        const targetIndex = mapAstroToGrid(act.astroPos!);
-        tokensDeductMap[act.jugadorId] += 2;
+      if (group.tipoAccion === 'DEVOCION_SOL' || group.tipoAccion === 'DEVOCION_LUNA') {
+        const targetIndex = mapAstroToGrid(group.astroPos!);
+        const allNewTokens: any[] = [];
 
-        const newTokens = Array.from({ length: 2 }, () => ({
-          id: getNextTokenId(),
-          colocado: true,
-          jugador: act.jugador,
-          jugadorId: act.jugadorId,
-        }));
+        for (const act of group.actions) {
+          tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + 2;
+          const newTokens = Array.from({ length: 2 }, () => ({
+            id: getNextTokenId(),
+            colocado: true,
+            jugador: act.jugador,
+            jugadorId: act.jugadorId,
+          }));
+          allNewTokens.push(...newTokens);
+        }
 
         runInAction(() => {
           if (!this.tablero) return;
@@ -1903,18 +1940,20 @@ export class GameStore {
           this.tablero = {
             ...this.tablero,
             grid: this.tablero.grid.map((m, idx) =>
-              idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] } : m
+              idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...allNewTokens] } : m
             ),
           };
-          const logEntry: ActionResolutionLog = {
-            jugadorNombre: act.jugadorNombre,
-            jugadorNumero: act.jugadorNumero,
-            cartaNombre: act.cartaNombre,
-            tipoAccion: act.tipoAccion,
-            prioridad: act.prioridad,
-            detalle: `Coloca 2 fichas en ${musa.nombre} (${act.tipoAccion === 'DEVOCION_SOL' ? 'Sol' : 'Luna'})`,
-          };
-          newLogs.push(logEntry);
+          for (const act of group.actions) {
+            const logEntry: ActionResolutionLog = {
+              jugadorNombre: act.jugadorNombre,
+              jugadorNumero: act.jugadorNumero,
+              cartaNombre: act.cartaNombre,
+              tipoAccion: act.tipoAccion,
+              prioridad: act.prioridad,
+              detalle: `Coloca 2 fichas en ${musa.nombre} (${act.tipoAccion === 'DEVOCION_SOL' ? 'Sol' : 'Luna'})`,
+            };
+            newLogs.push(logEntry);
+          }
           this.actionLogs = [...newLogs];
         });
 
@@ -1922,33 +1961,34 @@ export class GameStore {
         runInAction(() => {
           this.activeMusaIndex = null;
         });
-      } else if (act.tipoAccion === 'REVOLUCION_SOL' || act.tipoAccion === 'REVOLUCION_LUNA') {
-        tokensDeductMap[act.jugadorId] += 1;
+      } else if (group.tipoAccion === 'REVOLUCION_SOL' || group.tipoAccion === 'REVOLUCION_LUNA') {
+        const allCenterTokens: any[] = [];
+        for (const act of group.actions) {
+          tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + 1;
+          allCenterTokens.push({
+            id: getNextTokenId(),
+            colocado: true,
+            jugador: act.jugador,
+            jugadorId: act.jugadorId,
+          });
+        }
 
-        const targetAstroPos = act.astroPos !== undefined ? act.astroPos : (act.tipoAccion === 'REVOLUCION_SOL' ? this.tablero.solPos : this.tablero.lunaPos);
-
-        const newToken = {
-          id: getNextTokenId(),
-          colocado: true,
-          jugador: act.jugador,
-          jugadorId: act.jugadorId,
-        };
-
-        // Step A: place token at center
+        // Step A: place token at center for EACH player in group
         runInAction(() => {
           if (!this.tablero) return;
           this.activeMusaIndex = 4;
           this.tablero = {
             ...this.tablero,
             grid: this.tablero.grid.map((m, idx) =>
-              idx === 4 ? { ...m, tokensColocados: [...m.tokensColocados, newToken] } : m
+              idx === 4 ? { ...m, tokensColocados: [...m.tokensColocados, ...allCenterTokens] } : m
             ),
           };
         });
 
         await sleep(600);
 
-        // Step B: rotate grid in revolution for ANY player (Human or Bot)
+        // Step B: rotate grid ONCE in revolution
+        const targetAstroPos = group.astroPos !== undefined ? group.astroPos : (group.tipoAccion === 'REVOLUCION_SOL' ? this.tablero.solPos : this.tablero.lunaPos);
         runInAction(() => {
           if (!this.tablero) return;
           this.revolutionAnimating = true;
@@ -1956,15 +1996,17 @@ export class GameStore {
             ...this.tablero,
             grid: applyRevolution(this.tablero.grid, targetAstroPos),
           };
-          const logEntry: ActionResolutionLog = {
-            jugadorNombre: act.jugadorNombre,
-            jugadorNumero: act.jugadorNumero,
-            cartaNombre: act.cartaNombre,
-            tipoAccion: act.tipoAccion,
-            prioridad: act.prioridad,
-            detalle: `Coloca 1 ficha al centro y rota el semiciclo ${act.tipoAccion === 'REVOLUCION_SOL' ? 'solar' : 'lunar'}`,
-          };
-          newLogs.push(logEntry);
+          for (const act of group.actions) {
+            const logEntry: ActionResolutionLog = {
+              jugadorNombre: act.jugadorNombre,
+              jugadorNumero: act.jugadorNumero,
+              cartaNombre: act.cartaNombre,
+              tipoAccion: act.tipoAccion,
+              prioridad: act.prioridad,
+              detalle: `Coloca 1 ficha al centro y rota el semiciclo ${act.tipoAccion === 'REVOLUCION_SOL' ? 'solar' : 'lunar'}`,
+            };
+            newLogs.push(logEntry);
+          }
           this.actionLogs = [...newLogs];
         });
 
@@ -1973,46 +2015,48 @@ export class GameStore {
           this.revolutionAnimating = false;
           this.activeMusaIndex = null;
         });
-      } else if (act.tipoAccion === 'INSPIRACION') {
-        const musaName = act.musaName!;
-        const targetCells = getInspirationTargetCells(musaName, currentTablero.solPos);
-        tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + targetCells.length * 2;
+      } else if (group.tipoAccion === 'INSPIRACION') {
+        for (const act of group.actions) {
+          const musaName = act.musaName!;
+          const targetCells = getInspirationTargetCells(musaName, currentTablero.solPos);
+          tokensDeductMap[act.jugadorId] = (tokensDeductMap[act.jugadorId] || 0) + targetCells.length * 2;
 
-        runInAction(() => {
-          if (!this.tablero) return;
-          let updatedG = [...this.tablero.grid];
-          targetCells.forEach((targetIndex) => {
-            const newTokens = Array.from({ length: 2 }, () => ({
-              id: getNextTokenId(),
-              colocado: true,
-              jugador: act.jugador,
-              jugadorId: act.jugadorId,
-            }));
-            updatedG = updatedG.map((m, idx) =>
-              idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] } : m
-            );
+          runInAction(() => {
+            if (!this.tablero) return;
+            let updatedG = [...this.tablero.grid];
+            targetCells.forEach((targetIndex) => {
+              const newTokens = Array.from({ length: 2 }, () => ({
+                id: getNextTokenId(),
+                colocado: true,
+                jugador: act.jugador,
+                jugadorId: act.jugadorId,
+              }));
+              updatedG = updatedG.map((m, idx) =>
+                idx === targetIndex ? { ...m, tokensColocados: [...m.tokensColocados, ...newTokens] } : m
+              );
+            });
+            this.tablero = { ...this.tablero, grid: updatedG };
+
+            const cardIdx = currentCards.findIndex((c) => c.id === act.rawCard?.id);
+            if (cardIdx !== -1) {
+              currentCards[cardIdx] = { ...currentCards[cardIdx], usada: true } as CartaInspiracion;
+              this.cards = currentCards;
+            }
+
+            const logEntry: ActionResolutionLog = {
+              jugadorNombre: act.jugadorNombre,
+              jugadorNumero: act.jugadorNumero,
+              cartaNombre: act.cartaNombre,
+              tipoAccion: 'INSPIRACION',
+              prioridad: act.prioridad,
+              detalle: `Coloca fichas geométricas según el Sol`,
+            };
+            newLogs.push(logEntry);
+            this.actionLogs = [...newLogs];
           });
-          this.tablero = { ...this.tablero, grid: updatedG };
 
-          const cardIdx = currentCards.findIndex((c) => c.id === act.rawCard?.id);
-          if (cardIdx !== -1) {
-            currentCards[cardIdx] = { ...currentCards[cardIdx], usada: true } as CartaInspiracion;
-            this.cards = currentCards;
-          }
-
-          const logEntry: ActionResolutionLog = {
-            jugadorNombre: act.jugadorNombre,
-            jugadorNumero: act.jugadorNumero,
-            cartaNombre: act.cartaNombre,
-            tipoAccion: 'INSPIRACION',
-            prioridad: act.prioridad,
-            detalle: `Coloca fichas geométricas según el Sol`,
-          };
-          newLogs.push(logEntry);
-          this.actionLogs = [...newLogs];
-        });
-
-        await sleep(1100);
+          await sleep(1100);
+        }
       }
 
       await sleep(300);
